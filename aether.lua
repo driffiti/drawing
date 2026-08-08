@@ -1015,9 +1015,15 @@ local function bindPlayer(player)
             if char then
                 pcall(function() char:WaitForChild("Humanoid", 5) end)
                 pcall(function()
-                    char:WaitForChild("HumanoidRootPart", 3)
-                        or char:WaitForChild("UpperTorso", 3)
-                        or char:WaitForChild("Torso", 3)
+                    local root = char:FindFirstChild("HumanoidRootPart")
+                        or char:FindFirstChild("UpperTorso")
+                        or char:FindFirstChild("Torso")
+                    if not root then
+                        root = char:WaitForChild("HumanoidRootPart", 3)
+                            or char:WaitForChild("UpperTorso", 2)
+                            or char:WaitForChild("Torso", 2)
+                    end
+                    return root
                 end)
             end
             cacheCharacter(st, char)
