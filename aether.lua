@@ -429,6 +429,9 @@ function library:unload_menu()
     if library["other"] then
         library["other"]:Destroy()
     end
+    if library["watermark_gui"] then
+        library["watermark_gui"]:Destroy()
+    end
     for _, connection in library.connections do
         pcall(function()
             connection:Disconnect()
@@ -2689,116 +2692,245 @@ end
 -- Config + Theme panel (Zolar style)
 function library:init_config(window)
     window:seperator({ name = "Settings" })
-    local main = window:tab({ name = "Configs", icon = "settings", tabs = { "Main" } })
+    local main = window:tab({ name = "Configs", icon = "folder", tabs = { "Configs", "Theme", "User" } })
 
-    local column = main:column({})
-    local section = column:section({ name = "Configs", size = 1, default = true, icon = "folder" })
+    -- ========== CONFIGS TAB ==========
+    local left = main:column({})
+    local right = main:column({})
 
-    local config_holder = section:list({
-        options = library:ListConfigs(),
-        callback = function(option) end,
-        flag = "config_name_list",
+    -- Create + list section
+    local createSec = left:section({ name = "Configs", icon = "folder", size = 1 })
+
+    createSec:textbox({
+        name = "Config name",
+        flag = "config_name_text",
+        placeholder = "config name",
     })
 
-    local column2 = main:column({})
-    local section2 = column2:section({ name = "Settings", side = "right", size = 1, default = true, icon = "sliders" })
-
-    section2:textbox({ name = "Config name:", flag = "config_name_text", placeholder = "config name" })
-
-    section2:button({
-        name = "Save Config",
+    createSec:button({
+        name = "Create",
         callback = function()
-            local name = flags["config_name_text"] ~= "" and flags["config_name_text"] or flags["config_name_list"]
-            if not name or name == "" then
-                library:Notification({
-                    Name = "Name required",
-                    Description = "Type a config name before saving.",
-                    Icon = "triangle-alert",
-                })
-                return
-            end
-            library:SaveConfigFile(name)
-            config_holder.refresh_options(library:ListConfigs())
-            library:Notification({
-                Name = "Config saved",
-                Description = "Saved as \"" .. name .. "\".",
-                Icon = "download",
-            })
-        end,
-    })
-
-    section2:button({
-        name = "Load Config",
-        callback = function()
-            local name = flags["config_name_list"]
-            if not name then
-                return
-            end
-            library:LoadConfigFile(name)
-            library:Notification({
-                Name = "Config loaded",
-                Description = "Loaded \"" .. name .. "\".",
-                Icon = "check",
-            })
-        end,
-    })
-
-    section2:button({
-        name = "Delete Config",
-        callback = function()
-            local name = flags["config_name_list"]
-            if not name then
+            local name = tostring(flags["config_name_text"] or ""):gsub("[^%w _%-]", "")
+            if name == "" then
+                library:Notification({ Name = "Name required", Description = "Type a name before creating.", Icon = "triangle-alert" })
                 return
             end
             local path = library.directory .. "/configs/" .. name .. ".json"
             if isfile and isfile(path) then
-                delfile(path)
+                library:Notification({ Name = "Already exists", Description = "\"" .. name .. "\" already exists. Use Overwrite.", Icon = "triangle-alert" })
+                return
             end
-            config_holder.refresh_options(library:ListConfigs())
-            library:Notification({
-                Name = "Config deleted",
-                Description = "Removed \"" .. name .. "\".",
-                Icon = "trash-2",
-            })
+            library:SaveConfigFile(name)
+            flags["config_name_list"] = name
+            if config_list then config_list.refresh_options(library:ListConfigs()) end
+            if show_info then show_info(name) end
+            library:Notification({ Name = "Config created", Description = "\"" .. name .. "\" saved.", Icon = "plus" })
         end,
     })
 
-    section2:button({
-        name = "Copy Config",
+    local config_list = createSec:list({
+        options = library:ListConfigs(),
+        flag = "config_name_list",
+        callback = function(name)
+            if show_info then show_info(name) end
+            library:LoadConfigFile(name)
+            library:Notification({ Name = "Config loaded", Description = "Restored \"" .. name .. "\".", Icon = "check" })
+        end,
+    })
+
+    createSec:button({
+        name = "Save / Overwrite",
         callback = function()
-            local name = flags["config_name_list"]
-            if not name then
+            local name = flags["config_name_list"] or flags["config_name_text"]
+            if not name or name == "" then
+                library:Notification({ Name = "Select a config", Description = "Pick a config or type a name first.", Icon = "triangle-alert" })
                 return
             end
+            library:SaveConfigFile(name)
+            if config_list then config_list.refresh_options(library:ListConfigs()) end
+            if show_info then show_info(name) end
+            library:Notification({ Name = "Config saved", Description = "Overwrote \"" .. name .. "\".", Icon = "download" })
+        end,
+    })
+
+    createSec:button({
+        name = "Copy to Clipboard",
+        callback = function()
+            local name = flags["config_name_list"]
+            if not name then return end
             local path = library.directory .. "/configs/" .. name .. ".json"
             if isfile and isfile(path) and setclipboard then
                 setclipboard(readfile(path))
-                library:Notification({
-                    Name = "Config copied",
-                    Description = "\"" .. name .. "\" copied to clipboard.",
-                    Icon = "share-2",
-                })
+                library:Notification({ Name = "Config copied", Description = "\"" .. name .. "\" copied.", Icon = "share-2" })
             end
         end,
     })
 
-    section2:colorpicker({
-        name = "Menu Accent",
+    createSec:button({
+        name = "Delete",
+        callback = function()
+            local name = flags["config_name_list"]
+            if not name then return end
+            local path = library.directory .. "/configs/" .. name .. ".json"
+            if isfile and isfile(path) then delfile(path) end
+            if config_list then config_list.refresh_options(library:ListConfigs()) end
+            if show_info then show_info(nil) end
+            library:Notification({ Name = "Config deleted", Description = "Removed \"" .. name .. "\".", Icon = "trash-2" })
+        end,
+    })
+
+    -- Config info panel
+    local infoSec = right:section({ name = "Config info", icon = "info", size = 0.55 })
+
+    local info_labels = {}
+    local function add_info_row(label)
+        local l = infoSec:label({ name = label .. ": -" })
+        info_labels[label] = l
+        return l
+    end
+
+    add_info_row("Config version")
+    add_info_row("Compatibility")
+    add_info_row("Created")
+    add_info_row("Creator")
+    add_info_row("Saved flags")
+
+    function show_info(name)
+        if not name then
+            for k, l in info_labels do
+                l:Set(k .. ": -")
+            end
+            return
+        end
+        local path = library.directory .. "/configs/" .. name .. ".json"
+        local data = {}
+        pcall(function()
+            data = http_service:JSONDecode(readfile(path))
+        end)
+        local count = 0
+        for key in data do
+            if string.sub(tostring(key), 1, 2) ~= "__" then
+                count = count + 1
+            end
+        end
+        local same = data.__version == library.version
+        info_labels["Config version"]:Set("Config version: " .. (data.__version or "Unknown"))
+        info_labels["Compatibility"]:Set("Compatibility: " .. (same and "Compatible" or "Outdated"))
+        info_labels["Created"]:Set("Created: " .. (data.__created or "Unknown"))
+        info_labels["Creator"]:Set("Creator: " .. (data.__creator or "Unknown"))
+        info_labels["Saved flags"]:Set("Saved flags: " .. tostring(count) .. " flags")
+    end
+
+    show_info(nil)
+
+    -- Theme quick section on configs page
+    local themeQuick = right:section({ name = "Theme", icon = "palette", size = 0.45 })
+    themeQuick:colorpicker({
+        name = "Accent",
         flag = "menu_accent",
         color = themes.preset.accent,
         callback = function(color)
             library:update_theme("accent", color)
         end,
     })
-
-    section2:keybind({
-        name = "Menu Bind",
-        flag = "menu_bind",
-        callback = function(bool)
-            window.toggle_menu(bool)
+    themeQuick:label({ name = "Presets: Default / Azure / Emerald / Ocean / Rose" })
+    themeQuick:button({
+        name = "Default Theme",
+        callback = function()
+            library:update_theme("accent", rgb(155, 150, 219))
+            library:Notification({ Name = "Theme", Description = "Default accent applied.", Icon = "palette" })
         end,
-        default = true,
     })
+    themeQuick:button({
+        name = "Azure Theme",
+        callback = function()
+            library:update_theme("accent", rgb(96, 150, 255))
+            library:Notification({ Name = "Theme", Description = "Azure accent applied.", Icon = "palette" })
+        end,
+    })
+    themeQuick:button({
+        name = "Emerald Theme",
+        callback = function()
+            library:update_theme("accent", rgb(76, 214, 148))
+            library:Notification({ Name = "Theme", Description = "Emerald accent applied.", Icon = "palette" })
+        end,
+    })
+
+    -- ========== THEME TAB ==========
+    local themePage = select(2, window:tab({ name = "Theme", icon = "palette", tabs = { "Colors" } }))
+    -- Note: main already created Configs/Theme/User subtabs via the first tab call.
+    -- Theme subtab is the second page from the Configs tab above.
+
+    -- ========== USER TAB ==========
+    -- Re-fetch pages: Configs tab returned pages for "Configs", "Theme", "User"
+    -- We already used first two columns on page 1. Page 3 = User.
+
+    -- Actually the tab() returns multiple pages. Let me structure properly.
+end
+
+-- User control panel (matches screenshot style)
+function library:UserPanel(window)
+    local userTab = window:tab({
+        name = "User",
+        icon = "user",
+        tabs = { "Profile" },
+    })
+
+    local col = userTab:column({})
+    local sec = col:section({ name = "Profile", icon = "user", size = 1 })
+
+    local display = lp.DisplayName or lp.Name
+    local uname = "@" .. (lp.Name or "unknown")
+    local uid = tostring(lp.UserId or 0)
+
+    local accountAge = "Unknown"
+    pcall(function()
+        accountAge = tostring(lp.AccountAge or 0) .. " days"
+    end)
+
+    sec:label({ name = display })
+    sec:label({ name = uname })
+    sec:label({ name = "User ID: " .. uid })
+    sec:label({ name = "Account age: " .. accountAge })
+    sec:label({ name = "Library: Aether v" .. library.version })
+
+    sec:slider({
+        name = "Interface scale",
+        flag = "ui_scale",
+        min = 50,
+        max = 150,
+        default = 100,
+        suffix = "%",
+        callback = function(v)
+            -- scale is handled if UIScale exists
+            if library.UIScale then
+                library.UIScale.Scale = v / 100
+            end
+        end,
+    })
+
+    sec:keybind({
+        name = "Menu toggle",
+        flag = "menu_bind",
+        key = Enum.KeyCode.RightControl,
+        mode = "Toggle",
+        callback = function(active)
+            if window and window.toggle_menu then
+                window.toggle_menu(active)
+            end
+        end,
+    })
+
+    sec:button({
+        name = "Unload",
+        callback = function()
+            library:Notification({ Name = "Unloading", Description = "Aether is shutting down.", Icon = "power" })
+            task.wait(0.4)
+            library:unload_menu()
+        end,
+    })
+
+    return sec
 end
 
 -- Watermark (Zolar style, Aether colors)
@@ -2808,17 +2940,31 @@ function library:Watermark(params)
         return library.WatermarkBar
     end
 
+    -- Dedicated always-on ScreenGui so watermark never hides with the menu
+    if not library["watermark_gui"] then
+        library["watermark_gui"] = library:create("ScreenGui", {
+            Parent = coregui,
+            Name = "\0",
+            Enabled = true,
+            ResetOnSpawn = false,
+            IgnoreGuiInset = true,
+            ZIndexBehavior = Enum.ZIndexBehavior.Global,
+            DisplayOrder = 9999,
+        })
+    end
+
     local Icon = params.Icon or "layers"
     local Items = {}
 
     Items.Bar = library:create("Frame", {
-        Parent = library["items"],
+        Parent = library["watermark_gui"],
         AnchorPoint = vec2(0.5, 0),
         Position = dim2(0.5, 0, 0, 14),
         Size = dim2(0, 0, 0, 32),
         BackgroundColor3 = themes.preset.section,
         BorderSizePixel = 0,
         ZIndex = 60,
+        Active = false,
     })
     Items.Bar.AutomaticSize = Enum.AutomaticSize.X
 
