@@ -299,13 +299,18 @@ function library:update_theme(theme, color)
                         object[property_name] = color
                     end)
                 else
-                    -- prune destroyed instances
                     table.remove(bucket, i)
                 end
             end
         end
     end
     themes.preset[theme] = color
+    -- Keep only the active sidebar tab icon on the new accent
+    if theme == "accent" and library._active_tab_icon and library._active_tab_icon.Parent then
+        pcall(function()
+            library._active_tab_icon.ImageColor3 = color
+        end)
+    end
 end
 
 function library:close_element(new_path)
@@ -1011,7 +1016,7 @@ function library:tab(properties)
             BackgroundColor3 = rgb(255, 255, 255),
         })
         ApplyIcon(items["icon"], cfg.icon)
-        library:apply_theme(items["icon"], "accent", "ImageColor3")
+        -- Do NOT apply_theme accent to every tab icon — only the active tab is accented in open_tab
 
         items["name"] = library:create("TextLabel", {
             FontFace = fonts.font,
@@ -1230,6 +1235,7 @@ function library:tab(properties)
         library:tween(items["button"], { BackgroundTransparency = 0 })
         library:tween(items["icon"], { ImageColor3 = themes.preset.accent })
         library:tween(items["name"], { TextColor3 = rgb(255, 255, 255) })
+        library._active_tab_icon = items["icon"]
         library:tween(items["tab_holder"], { Size = dim2(1, -196, 1, -81) }, Enum.EasingStyle.Quad, 0.4)
 
         items["tab_holder"].Visible = true
