@@ -61,6 +61,7 @@ local library = {
     version = "1.3",
     theme_dirty = false,
     silent = false,
+    MenuKeybind = Enum.KeyCode.RightControl,
 }
 
 library.__index = library
@@ -286,10 +287,20 @@ function library:apply_theme(instance, theme, property)
 end
 
 function library:update_theme(theme, color)
-    for _, property in themes.utility[theme] do
-        for m, object in property do
-            if object[_] == themes.preset[theme] then
-                object[_] = color
+    -- Always push the new colour onto every registered instance (no equality check)
+    local buckets = themes.utility[theme]
+    if buckets then
+        for property_name, bucket in pairs(buckets) do
+            for i = #bucket, 1, -1 do
+                local object = bucket[i]
+                if object and object.Parent then
+                    pcall(function()
+                        object[property_name] = color
+                    end)
+                else
+                    -- prune destroyed instances
+                    table.remove(bucket, i)
+                end
             end
         end
     end
@@ -553,26 +564,7 @@ function library:window(properties)
         IgnoreGuiInset = true,
     })
 
-    library.UserScale = 1
-    library.UIScale = library:create("UIScale", {
-        Parent = library["items"],
-        Scale = 1,
-    })
-    library.PopupScale = library:create("UIScale", {
-        Parent = library["other"],
-        Scale = 1,
-    })
-
-    function library:SetUIScale(multiplier)
-        multiplier = clamp(tonumber(multiplier) or 1, 0.5, 1.5)
-        library.UserScale = multiplier
-        library:close_element()
-        library.UIScale.Scale = multiplier
-        if library.PopupScale then
-            library.PopupScale.Scale = multiplier
-        end
-        flags["ui_scale"] = floor(multiplier * 100)
-    end
+    
 
     library["other"] = library:create("ScreenGui", {
         Parent = coregui,
@@ -775,77 +767,22 @@ function library:window(properties)
             infoRow(90, "Account age", age)
 
             library:create("TextLabel", {
-                Parent = profilePopup, FontFace = fonts.font, Text = "Interface scale", TextSize = 13,
-                TextColor3 = themes.preset.dimtext, BackgroundTransparency = 1,
-                Position = dim2(0, 14, 0, 118), Size = dim2(1, -60, 0, 16),
-                TextXAlignment = Enum.TextXAlignment.Left, BorderSizePixel = 0, ZIndex = 81,
-            })
-            local scaleVal = library:create("TextLabel", {
-                Parent = profilePopup, FontFace = fonts.font, Text = "100%", TextSize = 12,
-                TextColor3 = themes.preset.text, BackgroundTransparency = 1,
-                Position = dim2(1, -50, 0, 118), Size = dim2(0, 36, 0, 16),
-                TextXAlignment = Enum.TextXAlignment.Right, BorderSizePixel = 0, ZIndex = 81,
-            })
-            local scaleTrack = library:create("Frame", {
-                Parent = profilePopup, BackgroundColor3 = themes.preset.light,
-                Position = dim2(0, 14, 0, 140), Size = dim2(1, -28, 0, 6), BorderSizePixel = 0, ZIndex = 81,
-            })
-            library:create("UICorner", { Parent = scaleTrack, CornerRadius = dim(1, 0) })
-            local scaleFill = library:create("Frame", {
-                Parent = scaleTrack, BackgroundColor3 = themes.preset.accent,
-                Size = dim2(0.5, 0, 1, 0), BorderSizePixel = 0, ZIndex = 82,
-            })
-            library:create("UICorner", { Parent = scaleFill, CornerRadius = dim(1, 0) })
-            library:apply_theme(scaleFill, "accent", "BackgroundColor3")
-            local scaleKnob = library:create("Frame", {
-                Parent = scaleTrack, AnchorPoint = vec2(0.5, 0.5),
-                Position = dim2(0.5, 0, 0.5, 0), Size = dim2(0, 12, 0, 12),
-                BackgroundColor3 = rgb(255, 255, 255), BorderSizePixel = 0, ZIndex = 83,
-            })
-            library:create("UICorner", { Parent = scaleKnob, CornerRadius = dim(1, 0) })
-            local scaleDrag = false
-            local function setScale(pct)
-                pct = clamp(pct, 50, 150)
-                local a = (pct - 50) / 100
-                scaleFill.Size = dim2(a, 0, 1, 0)
-                scaleKnob.Position = dim2(a, 0, 0.5, 0)
-                scaleVal.Text = tostring(floor(pct)) .. "%"
-                library:SetUIScale(pct / 100)
-            end
-            scaleTrack.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    scaleDrag = true
-                    local rel = clamp((input.Position.X - scaleTrack.AbsolutePosition.X) / math.max(scaleTrack.AbsoluteSize.X, 1), 0, 1)
-                    setScale(50 + rel * 100)
-                end
-            end)
-            library:connection(uis.InputChanged, function(input)
-                if scaleDrag and input.UserInputType == Enum.UserInputType.MouseMovement then
-                    local rel = clamp((input.Position.X - scaleTrack.AbsolutePosition.X) / math.max(scaleTrack.AbsoluteSize.X, 1), 0, 1)
-                    setScale(50 + rel * 100)
-                end
-            end)
-            library:connection(uis.InputEnded, function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then scaleDrag = false end
-            end)
-            setScale(flags["ui_scale"] or ((library.UIScale and library.UIScale.Scale or 1) * 100))
-
-            library:create("TextLabel", {
                 Parent = profilePopup, FontFace = fonts.font, Text = "Menu toggle", TextSize = 13,
                 TextColor3 = themes.preset.dimtext, BackgroundTransparency = 1,
-                Position = dim2(0, 14, 0, 158), Size = dim2(0, 100, 0, 16),
+                Position = dim2(0, 14, 0, 118), Size = dim2(0, 100, 0, 16),
                 TextXAlignment = Enum.TextXAlignment.Left, BorderSizePixel = 0, ZIndex = 81,
             })
             local currentKey = library.MenuKeybind or Enum.KeyCode.RightControl
-            local keyName = keys[currentKey] or (currentKey.Name or "RCtrl")
+            local keyName = keys[currentKey] or (typeof(currentKey) == "EnumItem" and currentKey.Name) or "RCtrl"
             local keyBox = library:create("TextButton", {
                 Parent = profilePopup, FontFace = fonts.font, Text = keyName, TextSize = 12,
                 TextColor3 = themes.preset.text, AutoButtonColor = false,
                 BackgroundColor3 = themes.preset.light,
-                Position = dim2(1, -70, 0, 154), Size = dim2(0, 56, 0, 22),
+                Position = dim2(1, -70, 0, 114), Size = dim2(0, 56, 0, 22),
                 BorderSizePixel = 0, ZIndex = 81,
             })
             library:create("UICorner", { Parent = keyBox, CornerRadius = dim(0, 4) })
+            library.ProfileKeyBox = keyBox
             local binding = false
             keyBox.MouseButton1Click:Connect(function()
                 if binding then return end
@@ -857,9 +794,8 @@ function library:window(properties)
                         library.MenuKeybind = input.KeyCode
                         local nm = keys[input.KeyCode] or input.KeyCode.Name
                         keyBox.Text = nm
-                        -- sync menu_bind flag if keybind element exists
                         if config_flags["menu_bind"] then
-                            pcall(config_flags["menu_bind"], { key = input.KeyCode, mode = "Toggle" })
+                            pcall(function() config_flags["menu_bind"](input.KeyCode) end)
                         end
                         binding = false
                         conn:Disconnect()
@@ -871,7 +807,7 @@ function library:window(properties)
                 Parent = profilePopup, FontFace = fonts.font, Text = "Unload", TextSize = 14,
                 TextColor3 = themes.preset.text, AutoButtonColor = false,
                 BackgroundColor3 = themes.preset.light,
-                Position = dim2(0, 14, 0, 190), Size = dim2(1, -28, 0, 30),
+                Position = dim2(0, 14, 0, 150), Size = dim2(1, -28, 0, 30),
                 BorderSizePixel = 0, ZIndex = 81,
             })
             library:create("UICorner", { Parent = unloadBtn, CornerRadius = dim(0, 6) })
@@ -888,7 +824,7 @@ function library:window(properties)
                 profilePopup.Size = dim2(0, 240, 0, 0)
                 profilePopup.BackgroundTransparency = 1
                 profilePopup.Visible = true
-                library:tween(profilePopup, { Size = dim2(0, 240, 0, 234), BackgroundTransparency = 0 }, Enum.EasingStyle.Quint, 0.22)
+                library:tween(profilePopup, { Size = dim2(0, 240, 0, 194), BackgroundTransparency = 0 }, Enum.EasingStyle.Quint, 0.22)
             else
                 library:tween(profilePopup, { Size = dim2(0, 240, 0, 0), BackgroundTransparency = 1 }, Enum.EasingStyle.Quint, 0.18)
                 task.delay(0.2, function()
@@ -2221,8 +2157,7 @@ function library:dropdown(options)
             end
 
             local box = items["box"]
-            local scale = (library.UIScale and library.UIScale.Scale) or 1
-            if scale < 0.01 then scale = 1 end
+            local scale = 1
             -- AbsolutePosition is screen-space (post-scale); Position offsets are pre-scale
             local sx = box.AbsolutePosition.X / scale
             local sy = (box.AbsolutePosition.Y + box.AbsoluteSize.Y) / scale + 4
@@ -2908,8 +2843,7 @@ function library:colorpicker(options)
     function cfg.set_visible(bool)
         cfg.open = bool
         if bool then
-            local scale = (library.UIScale and library.UIScale.Scale) or 1
-            if scale < 0.01 then scale = 1 end
+            local scale = 1
             local sp = items["swatch"].AbsolutePosition
             local ss = items["swatch"].AbsoluteSize
             local px = (sp.X + ss.X) / scale - 200
@@ -3366,11 +3300,11 @@ function library:init_config(window)
     themeSec:label({ name = "Presets" })
 
     local presets = {
-        { name = "Default", color = rgb(155, 150, 219) },
-        { name = "Azure", color = rgb(96, 150, 255) },
-        { name = "Emerald", color = rgb(76, 214, 148) },
-        { name = "Ocean", color = rgb(72, 200, 214) },
-        { name = "Rose", color = rgb(240, 118, 150) },
+        { name = "Default", color = rgb(155, 150, 219), bg = rgb(14, 14, 16), section = rgb(22, 22, 24), element = rgb(25, 25, 29), light = rgb(33, 33, 35) },
+        { name = "Azure", color = rgb(96, 150, 255), bg = rgb(16, 20, 30), section = rgb(20, 25, 37), element = rgb(25, 31, 46), light = rgb(33, 41, 60) },
+        { name = "Emerald", color = rgb(76, 214, 148), bg = rgb(14, 24, 20), section = rgb(18, 30, 25), element = rgb(23, 37, 31), light = rgb(30, 48, 40) },
+        { name = "Ocean", color = rgb(72, 200, 214), bg = rgb(14, 23, 28), section = rgb(18, 28, 34), element = rgb(23, 35, 42), light = rgb(30, 45, 54) },
+        { name = "Rose", color = rgb(240, 118, 150), bg = rgb(26, 17, 21), section = rgb(32, 21, 26), element = rgb(39, 26, 32), light = rgb(50, 33, 41) },
     }
     local dotsHolder = library:create("Frame", {
         Parent = themeSec.items["elements"], BackgroundTransparency = 1,
@@ -3390,7 +3324,20 @@ function library:init_config(window)
         local stroke = library:create("UIStroke", { Parent = dot, Color = rgb(255, 255, 255), Thickness = 0 })
         dot.MouseButton1Click:Connect(function()
             library:update_theme("accent", preset.color)
-            if flags["menu_accent"] ~= nil then flags["menu_accent"] = preset.color end
+            -- apply full palette
+            themes.preset.background = preset.bg or themes.preset.background
+            themes.preset.section = preset.section or themes.preset.section
+            themes.preset.element = preset.element or themes.preset.element
+            themes.preset.light = preset.light or themes.preset.light
+            -- force-refresh every themed accent instance
+            library:update_theme("accent", preset.color)
+            if config_flags["menu_accent"] then
+                pcall(config_flags["menu_accent"], preset.color)
+            else
+                flags["menu_accent"] = { Color = preset.color, Transparency = 0 }
+            end
+            if config_flags["theme_bg"] then pcall(config_flags["theme_bg"], themes.preset.background) end
+            if config_flags["theme_section"] then pcall(config_flags["theme_section"], themes.preset.section) end
             for _, child in dotsHolder:GetChildren() do
                 if child:IsA("TextButton") then
                     local s = child:FindFirstChildOfClass("UIStroke")
@@ -3416,12 +3363,29 @@ function library:init_config(window)
     })
     themeSec:keybind({
         name = "Menu Bind", flag = "menu_bind",
-        key = Enum.KeyCode.RightControl, mode = "Toggle",
+        key = library.MenuKeybind or Enum.KeyCode.RightControl, mode = "Toggle",
         callback = function(bool)
             if window and window.toggle_menu then window.toggle_menu(bool) end
         end,
         default = true,
     })
+    -- Keep ProfileKeyBox text in sync when keybind is changed from config page
+    do
+        local old_set = config_flags["menu_bind"]
+        if old_set then
+            config_flags["menu_bind"] = function(value)
+                old_set(value)
+                local key = value
+                if type(value) == "table" then key = value.key or value[1] end
+                if typeof(key) == "EnumItem" then
+                    library.MenuKeybind = key
+                    if library.ProfileKeyBox then
+                        library.ProfileKeyBox.Text = keys[key] or key.Name
+                    end
+                end
+            end
+        end
+    end
 
     -- Autoload on startup
     if autoload_name then
@@ -3461,20 +3425,7 @@ function library:UserPanel(window)
     sec:label({ name = "Account age: " .. accountAge })
     sec:label({ name = "Library: Aether v" .. library.version })
 
-    sec:slider({
-        name = "Interface scale",
-        flag = "ui_scale",
-        min = 50,
-        max = 150,
-        default = 100,
-        suffix = "%",
-        callback = function(v)
-            -- scale is handled if UIScale exists
-            if library.UIScale then
-                library.UIScale.Scale = v / 100
-            end
-        end,
-    })
+    
 
     sec:keybind({
         name = "Menu toggle",
