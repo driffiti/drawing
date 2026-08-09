@@ -1916,15 +1916,15 @@ function library:dropdown(options)
         Size = dim2(0, 150, 0, 0),
         BorderColor3 = rgb(0, 0, 0),
         BorderSizePixel = 0,
-        BackgroundColor3 = themes.preset.element,
+        BackgroundColor3 = themes.preset.light, -- match dropdown button
         Visible = false,
         ClipsDescendants = true,
         ZIndex = 50,
     })
 
-    library:create("UICorner", {
+    local popupCorner = library:create("UICorner", {
         Parent = popupFrame,
-        CornerRadius = dim(0, 8),
+        CornerRadius = dim(0, 6), -- match button radius
     })
 
     library:create("UIStroke", {
@@ -1939,7 +1939,7 @@ function library:dropdown(options)
         Name = "\0",
         Size = dim2(1, 0, 0, 30),
         BorderSizePixel = 0,
-        BackgroundColor3 = themes.preset.element,
+        BackgroundColor3 = themes.preset.light,
         Visible = false,
         ZIndex = 51,
     })
@@ -2159,35 +2159,43 @@ function library:dropdown(options)
 
             local box = items["box"]
             local scale = 1
-            -- AbsolutePosition is screen-space (post-scale); Position offsets are pre-scale
             local sx = box.AbsolutePosition.X / scale
-            local sy = (box.AbsolutePosition.Y + box.AbsoluteSize.Y) / scale + 4
+            -- sit flush under the button so it reads as one control
+            local sy = (box.AbsolutePosition.Y + box.AbsoluteSize.Y) / scale - 1
             local w = box.AbsoluteSize.X / scale
 
+            popupFrame.BackgroundColor3 = themes.preset.light
             popupFrame.Size = dim2(0, w, 0, 0)
-            popupFrame.BackgroundTransparency = 0.35
+            popupFrame.BackgroundTransparency = 0
             popupFrame.Position = dim2(0, sx, 0, sy)
             popupFrame.Parent = library["items"]
             popupFrame.Visible = true
             popupFrame.ClipsDescendants = true
 
+            -- square the shared edge so list + button look joined
+            local boxCorner = box:FindFirstChildOfClass("UICorner")
+            if boxCorner then boxCorner.CornerRadius = dim(0, 6) end
+
             library:tween(popupFrame, {
                 Size = dim2(0, w, 0, targetH),
-                BackgroundTransparency = 0,
-            }, Enum.EasingStyle.Quint, 0.2)
-            library:tween(items["arrow"], { Rotation = 180 }, Enum.EasingStyle.Quint, 0.2)
+            }, Enum.EasingStyle.Quint, 0.18)
+            library:tween(items["arrow"], { Rotation = 180 }, Enum.EasingStyle.Quint, 0.18)
             library:close_element(cfg)
         else
+            local box = items["box"]
+            local scale = 1
+            local sx = box.AbsolutePosition.X / scale
+            local sy = (box.AbsolutePosition.Y + box.AbsoluteSize.Y) / scale - 1
+            local w = box.AbsoluteSize.X / scale
+            popupFrame.Position = dim2(0, sx, 0, sy)
             library:tween(popupFrame, {
-                Size = dim2(0, popupFrame.AbsoluteSize.X, 0, 0),
-                BackgroundTransparency = 0.5,
-            }, Enum.EasingStyle.Quint, 0.16)
-            library:tween(items["arrow"], { Rotation = 0 }, Enum.EasingStyle.Quint, 0.16)
-            task.delay(0.18, function()
+                Size = dim2(0, w, 0, 0),
+            }, Enum.EasingStyle.Quint, 0.15)
+            library:tween(items["arrow"], { Rotation = 0 }, Enum.EasingStyle.Quint, 0.15)
+            task.delay(0.16, function()
                 if not popup.open then
                     popupFrame.Visible = false
                     popupFrame.Parent = library["other"]
-                    popupFrame.BackgroundTransparency = 0
                 end
             end)
         end
