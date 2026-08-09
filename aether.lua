@@ -3850,4 +3850,23 @@ function library:Notification(Params)
             if d:IsA("TextLabel") then
                 library:tween(d, { TextTransparency = 1 }, Enum.EasingStyle.Quart, 0.25)
             elseif d:IsA("ImageLabel") then
-                library:tween(d, { ImageTra
+                library:tween(d, { ImageTransparency = 1 }, Enum.EasingStyle.Quart, 0.25)
+            elseif d:IsA("Frame") then
+                library:tween(d, { BackgroundTransparency = 1 }, Enum.EasingStyle.Quart, 0.25)
+            end
+        end
+        task.delay(0.3, function()
+            local Index = find(library.Notifs, Notif)
+            if Index then remove(library.Notifs, Index) end
+            Frame:Destroy()
+            Reflow()
+        end)
+    end
+
+    CloseHit.MouseButton1Down:Connect(Dismiss)
+    library:tween(BarFill, { Size = dim2(0, 0, 1, 0) }, Enum.EasingStyle.Linear, Duration)
+    task.delay(Duration, Dismiss)
+end
+
+getgenv().Aether = library
+return library
