@@ -1441,21 +1441,16 @@ function library:slider(options)
     flags[cfg.flag] = cfg.default
 
     local items = cfg.items
-    items["slider"] = library:create("TextButton", {
-        FontFace = fonts.font,
-        TextColor3 = rgb(0, 0, 0),
-        BorderColor3 = rgb(0, 0, 0),
-        Text = "",
+    items["slider"] = library:create("Frame", {
         Parent = self.items["elements"],
         Name = "\0",
         BackgroundTransparency = 1,
-        Size = dim2(1, 0, 0, 0),
+        Size = dim2(1, 0, 0, 42),
         BorderSizePixel = 0,
-        AutomaticSize = Enum.AutomaticSize.Y,
-        TextSize = 14,
         BackgroundColor3 = rgb(255, 255, 255),
     })
 
+    -- Top row: name (left) + value (right) — both constrained so value never leaves the menu
     items["name"] = library:create("TextLabel", {
         FontFace = fonts.font,
         TextColor3 = themes.preset.text,
@@ -1463,19 +1458,14 @@ function library:slider(options)
         Text = cfg.name,
         Parent = items["slider"],
         Name = "\0",
-        Size = dim2(1, 0, 0, 0),
+        Size = dim2(1, -70, 0, 18),
+        Position = dim2(0, 5, 0, 0),
         BackgroundTransparency = 1,
         TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
         BorderSizePixel = 0,
-        AutomaticSize = Enum.AutomaticSize.XY,
-        TextSize = 16,
+        TextSize = 15,
         BackgroundColor3 = rgb(255, 255, 255),
-    })
-
-    library:create("UIPadding", {
-        Parent = items["name"],
-        PaddingRight = dim(0, 5),
-        PaddingLeft = dim(0, 5),
     })
 
     items["value"] = library:create("TextLabel", {
@@ -1485,12 +1475,12 @@ function library:slider(options)
         Text = tostring(cfg.default) .. cfg.suffix,
         Parent = items["slider"],
         Name = "\0",
-        Size = dim2(0, 0, 0, 0),
-        Position = dim2(1, -5, 0, 0),
+        Size = dim2(0, 60, 0, 18),
+        Position = dim2(1, -65, 0, 0),
         BackgroundTransparency = 1,
         TextXAlignment = Enum.TextXAlignment.Right,
+        TextTruncate = Enum.TextTruncate.AtEnd,
         BorderSizePixel = 0,
-        AutomaticSize = Enum.AutomaticSize.XY,
         TextSize = 14,
         BackgroundColor3 = rgb(255, 255, 255),
     })
@@ -1500,14 +1490,14 @@ function library:slider(options)
         Name = "\0",
         Position = dim2(0, 5, 0, 24),
         BorderColor3 = rgb(0, 0, 0),
-        Size = dim2(1, -10, 0, 10),
+        Size = dim2(1, -10, 0, 8),
         BorderSizePixel = 0,
         BackgroundColor3 = themes.preset.light,
     })
 
     library:create("UICorner", {
         Parent = items["track"],
-        CornerRadius = dim(0, 5),
+        CornerRadius = dim(0, 4),
     })
 
     items["fill"] = library:create("Frame", {
@@ -1522,7 +1512,7 @@ function library:slider(options)
 
     library:create("UICorner", {
         Parent = items["fill"],
-        CornerRadius = dim(0, 5),
+        CornerRadius = dim(0, 4),
     })
 
     items["knob"] = library:create("Frame", {
@@ -1531,7 +1521,7 @@ function library:slider(options)
         AnchorPoint = vec2(0.5, 0.5),
         Position = dim2(0, 0, 0.5, 0),
         BorderColor3 = rgb(0, 0, 0),
-        Size = dim2(0, 14, 0, 14),
+        Size = dim2(0, 12, 0, 12),
         BorderSizePixel = 0,
         BackgroundColor3 = rgb(255, 255, 255),
         ZIndex = 2,
@@ -1548,6 +1538,7 @@ function library:slider(options)
         Thickness = 2,
         ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
     })
+    library:apply_theme(items["knob"]:FindFirstChildOfClass("UIStroke"), "accent", "Color")
 
     items["hit"] = library:create("TextButton", {
         Parent = items["track"],
@@ -1625,18 +1616,12 @@ function library:dropdown(options)
     flags[cfg.flag] = cfg.default
 
     local items = cfg.items
-    items["dropdown"] = library:create("TextButton", {
-        FontFace = fonts.font,
-        TextColor3 = rgb(0, 0, 0),
-        BorderColor3 = rgb(0, 0, 0),
-        Text = "",
+    items["dropdown"] = library:create("Frame", {
         Parent = self.items["elements"],
         Name = "\0",
         BackgroundTransparency = 1,
-        Size = dim2(1, 0, 0, 0),
+        Size = dim2(1, 0, 0, 54),
         BorderSizePixel = 0,
-        AutomaticSize = Enum.AutomaticSize.Y,
-        TextSize = 14,
         BackgroundColor3 = rgb(255, 255, 255),
     })
 
@@ -1647,19 +1632,14 @@ function library:dropdown(options)
         Text = cfg.name,
         Parent = items["dropdown"],
         Name = "\0",
-        Size = dim2(1, 0, 0, 0),
+        Size = dim2(1, -10, 0, 18),
+        Position = dim2(0, 5, 0, 0),
         BackgroundTransparency = 1,
         TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
         BorderSizePixel = 0,
-        AutomaticSize = Enum.AutomaticSize.XY,
         TextSize = 15,
         BackgroundColor3 = rgb(255, 255, 255),
-    })
-
-    library:create("UIPadding", {
-        Parent = items["name"],
-        PaddingRight = dim(0, 5),
-        PaddingLeft = dim(0, 5),
     })
 
     items["box"] = library:create("Frame", {
@@ -1667,7 +1647,7 @@ function library:dropdown(options)
         Name = "\0",
         Position = dim2(0, 5, 0, 22),
         BorderColor3 = rgb(0, 0, 0),
-        Size = dim2(1, -10, 0, 30),
+        Size = dim2(1, -10, 0, 28),
         BorderSizePixel = 0,
         BackgroundColor3 = themes.preset.light,
     })
@@ -2714,42 +2694,45 @@ function library:init_config(window)
     section2:textbox({ name = "Config name:", flag = "config_name_text", placeholder = "config name" })
 
     section2:button({
-        name = "Save",
+        name = "Save Config",
         callback = function()
             local name = flags["config_name_text"] ~= "" and flags["config_name_text"] or flags["config_name_list"]
             if not name or name == "" then
-                notifications:create_notification({
-                    name = "Config name required",
-                    info = "Type a name before saving.",
+                library:Notification({
+                    Name = "Name required",
+                    Description = "Type a config name before saving.",
+                    Icon = "triangle-alert",
                 })
                 return
             end
             library:SaveConfigFile(name)
             config_holder.refresh_options(library:ListConfigs())
-            notifications:create_notification({
-                name = "Config saved",
-                info = "Saved as \"" .. name .. "\".",
+            library:Notification({
+                Name = "Config saved",
+                Description = "Saved as \"" .. name .. "\".",
+                Icon = "download",
             })
         end,
     })
 
     section2:button({
-        name = "Load",
+        name = "Load Config",
         callback = function()
             local name = flags["config_name_list"]
             if not name then
                 return
             end
             library:LoadConfigFile(name)
-            notifications:create_notification({
-                name = "Config loaded",
-                info = "Loaded \"" .. name .. "\".",
+            library:Notification({
+                Name = "Config loaded",
+                Description = "Loaded \"" .. name .. "\".",
+                Icon = "check",
             })
         end,
     })
 
     section2:button({
-        name = "Delete",
+        name = "Delete Config",
         callback = function()
             local name = flags["config_name_list"]
             if not name then
@@ -2760,15 +2743,16 @@ function library:init_config(window)
                 delfile(path)
             end
             config_holder.refresh_options(library:ListConfigs())
-            notifications:create_notification({
-                name = "Config deleted",
-                info = "Removed \"" .. name .. "\".",
+            library:Notification({
+                Name = "Config deleted",
+                Description = "Removed \"" .. name .. "\".",
+                Icon = "trash-2",
             })
         end,
     })
 
     section2:button({
-        name = "Copy",
+        name = "Copy Config",
         callback = function()
             local name = flags["config_name_list"]
             if not name then
@@ -2777,9 +2761,10 @@ function library:init_config(window)
             local path = library.directory .. "/configs/" .. name .. ".json"
             if isfile and isfile(path) and setclipboard then
                 setclipboard(readfile(path))
-                notifications:create_notification({
-                    name = "Config copied",
-                    info = "\"" .. name .. "\" copied to clipboard.",
+                library:Notification({
+                    Name = "Config copied",
+                    Description = "\"" .. name .. "\" copied to clipboard.",
+                    Icon = "share-2",
                 })
             end
         end,
@@ -2929,7 +2914,8 @@ function library:Watermark(params)
         end
     end)
 
-    library:draggify(Items.Bar)
+    -- Watermark is completely non-interactive / non-draggable
+    Items.Bar.Active = false
     library.WatermarkBar = Items.Bar
 
     local Watermark = { Instance = Items.Bar }
@@ -2945,27 +2931,32 @@ function library:Watermark(params)
     return Watermark
 end
 
--- Notifications (Aether colors)
+-- Notifications (right side, cleaner design with icon)
 function notifications:refresh_notifs()
     local offset = 50
+    local viewport = camera.ViewportSize.X
     for i, v in notifications.notifs do
-        local Position = vec2(20, offset)
-        library:tween(v, { Position = dim2(0, Position.X, 0, Position.Y) }, Enum.EasingStyle.Quad, 0.4)
-        offset = offset + (v.AbsoluteSize.Y + 10)
+        if v and v.Parent then
+            local targetX = viewport - v.AbsoluteSize.X - 20
+            library:tween(v, { Position = dim2(0, targetX, 0, offset) }, Enum.EasingStyle.Quad, 0.35)
+            offset = offset + (v.AbsoluteSize.Y + 12)
+        end
     end
     return offset
 end
 
 function notifications:fade(path, is_fading)
     local fading = is_fading and 1 or 0
-    library:tween(path, { BackgroundTransparency = fading }, Enum.EasingStyle.Quad, 1)
+    library:tween(path, { BackgroundTransparency = fading }, Enum.EasingStyle.Quad, 0.8)
     for _, instance in path:GetDescendants() do
         if instance:IsA("UIStroke") then
-            library:tween(instance, { Transparency = fading }, Enum.EasingStyle.Quad, 1)
+            library:tween(instance, { Transparency = fading }, Enum.EasingStyle.Quad, 0.8)
         elseif instance:IsA("TextLabel") then
-            library:tween(instance, { TextTransparency = fading })
-        elseif instance:IsA("Frame") then
-            library:tween(instance, { BackgroundTransparency = is_fading and 1 or 0.6 }, Enum.EasingStyle.Quad, 1)
+            library:tween(instance, { TextTransparency = fading }, Enum.EasingStyle.Quad, 0.8)
+        elseif instance:IsA("ImageLabel") then
+            library:tween(instance, { ImageTransparency = fading }, Enum.EasingStyle.Quad, 0.8)
+        elseif instance:IsA("Frame") and instance ~= path then
+            -- keep accent bar visible longer
         end
     end
 end
@@ -2974,30 +2965,72 @@ function notifications:create_notification(options)
     local cfg = {
         name = options.name or "Notification",
         info = options.info or options.Description or "",
-        lifetime = options.lifetime or 3,
+        lifetime = options.lifetime or 3.5,
+        icon = options.icon or options.Icon or "terminal",
         items = {},
     }
 
     local items = cfg.items
+    local width = 240
+
     items["notification"] = library:create("Frame", {
         Parent = library["items"],
-        Size = dim2(0, 210, 0, 53),
+        Size = dim2(0, width, 0, 0),
         Name = "\0",
         BorderColor3 = rgb(0, 0, 0),
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
-        AnchorPoint = vec2(1, 0),
+        AnchorPoint = vec2(0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
-        BackgroundColor3 = themes.preset.background,
+        BackgroundColor3 = themes.preset.section,
+        ZIndex = 80,
+    })
+
+    library:create("UICorner", {
+        Parent = items["notification"],
+        CornerRadius = dim(0, 8),
     })
 
     library:create("UIStroke", {
-        Color = rgb(23, 23, 29),
+        Color = rgb(30, 30, 36),
         Parent = items["notification"],
         Transparency = 1,
+        Thickness = 1,
         ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
     })
 
+    -- Left accent strip
+    items["strip"] = library:create("Frame", {
+        Parent = items["notification"],
+        Size = dim2(0, 3, 1, 0),
+        Position = dim2(0, 0, 0, 0),
+        BorderSizePixel = 0,
+        BackgroundColor3 = themes.preset.accent,
+        BackgroundTransparency = 1,
+        ZIndex = 81,
+    })
+    library:apply_theme(items["strip"], "accent", "BackgroundColor3")
+
+    library:create("UICorner", {
+        Parent = items["strip"],
+        CornerRadius = dim(0, 8),
+    })
+
+    -- Icon
+    items["icon"] = library:create("ImageLabel", {
+        Parent = items["notification"],
+        BackgroundTransparency = 1,
+        Position = dim2(0, 14, 0, 12),
+        Size = dim2(0, 18, 0, 18),
+        ImageColor3 = themes.preset.accent,
+        BorderSizePixel = 0,
+        ZIndex = 82,
+        ImageTransparency = 1,
+    })
+    library:apply_theme(items["icon"], "accent", "ImageColor3")
+    ApplyIcon(items["icon"], cfg.icon)
+
+    -- Title
     items["title"] = library:create("TextLabel", {
         FontFace = fonts.font,
         TextColor3 = themes.preset.text,
@@ -3006,18 +3039,17 @@ function notifications:create_notification(options)
         Parent = items["notification"],
         Name = "\0",
         BackgroundTransparency = 1,
-        Position = dim2(0, 7, 0, 6),
+        Position = dim2(0, 40, 0, 10),
+        Size = dim2(1, -52, 0, 18),
         BorderSizePixel = 0,
-        AutomaticSize = Enum.AutomaticSize.XY,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
         TextSize = 14,
-        BackgroundColor3 = rgb(255, 255, 255),
+        TextTransparency = 1,
+        ZIndex = 82,
     })
 
-    library:create("UICorner", {
-        Parent = items["notification"],
-        CornerRadius = dim(0, 3),
-    })
-
+    -- Description
     items["info"] = library:create("TextLabel", {
         FontFace = fonts.font,
         TextColor3 = themes.preset.dimtext,
@@ -3025,63 +3057,70 @@ function notifications:create_notification(options)
         Text = cfg.info,
         Parent = items["notification"],
         Name = "\0",
-        Position = dim2(0, 9, 0, 22),
+        Position = dim2(0, 40, 0, 30),
+        Size = dim2(1, -52, 0, 0),
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextWrapped = true,
-        AutomaticSize = Enum.AutomaticSize.XY,
-        TextSize = 14,
-        BackgroundColor3 = rgb(255, 255, 255),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        TextSize = 13,
+        TextTransparency = 1,
+        ZIndex = 82,
     })
 
     library:create("UIPadding", {
-        PaddingBottom = dim(0, 17),
-        PaddingRight = dim(0, 8),
-        Parent = items["info"],
+        PaddingBottom = dim(0, 14),
+        Parent = items["notification"],
     })
 
+    -- Progress bar at bottom
     items["bar"] = library:create("Frame", {
         AnchorPoint = vec2(0, 1),
         Parent = items["notification"],
         Name = "\0",
-        Position = dim2(0, 8, 1, -6),
+        Position = dim2(0, 0, 1, 0),
         BorderColor3 = rgb(0, 0, 0),
-        Size = dim2(0, 0, 0, 5),
-        BackgroundTransparency = 1,
+        Size = dim2(0, 0, 0, 2),
+        BackgroundTransparency = 0,
         BorderSizePixel = 0,
         BackgroundColor3 = themes.preset.accent,
+        ZIndex = 83,
     })
     library:apply_theme(items["bar"], "accent", "BackgroundColor3")
-
-    library:create("UICorner", {
-        Parent = items["bar"],
-        CornerRadius = dim(0, 999),
-    })
-
-    library:create("UIPadding", {
-        PaddingRight = dim(0, 8),
-        Parent = items["notification"],
-    })
 
     local index = #notifications.notifs + 1
     notifications.notifs[index] = items["notification"]
 
-    notifications:fade(items["notification"], false)
+    -- Start off-screen to the right
+    local viewport = camera.ViewportSize.X
+    items["notification"].Position = dim2(0, viewport + 20, 0, 50)
+    items["notification"].BackgroundTransparency = 0
+
+    -- Fade in elements
+    library:tween(items["strip"], { BackgroundTransparency = 0 }, Enum.EasingStyle.Quad, 0.4)
+    library:tween(items["icon"], { ImageTransparency = 0 }, Enum.EasingStyle.Quad, 0.4)
+    library:tween(items["title"], { TextTransparency = 0 }, Enum.EasingStyle.Quad, 0.4)
+    library:tween(items["info"], { TextTransparency = 0 }, Enum.EasingStyle.Quad, 0.4)
+    library:tween(items["notification"]:FindFirstChildOfClass("UIStroke"), { Transparency = 0 }, Enum.EasingStyle.Quad, 0.4)
 
     local offset = notifications:refresh_notifs()
-    items["notification"].Position = dim2(0, 20, 0, offset)
-
-    library:tween(items["notification"], { AnchorPoint = vec2(0, 0) }, Enum.EasingStyle.Quad, 1)
-    library:tween(items["bar"], { Size = dim2(1, -8, 0, 5) }, Enum.EasingStyle.Quad, cfg.lifetime)
+    local targetX = viewport - width - 20
+    library:tween(items["notification"], { Position = dim2(0, targetX, 0, offset) }, Enum.EasingStyle.Quint, 0.45)
+    library:tween(items["bar"], { Size = dim2(1, 0, 0, 2) }, Enum.EasingStyle.Linear, cfg.lifetime)
 
     task.spawn(function()
         task.wait(cfg.lifetime)
         notifications.notifs[index] = nil
         notifications:fade(items["notification"], true)
-        library:tween(items["notification"], { AnchorPoint = vec2(1, 0) }, Enum.EasingStyle.Quad, 1)
-        task.wait(1)
-        items["notification"]:Destroy()
+        library:tween(items["notification"], {
+            Position = dim2(0, viewport + 30, 0, items["notification"].Position.Y.Offset)
+        }, Enum.EasingStyle.Quad, 0.5)
+        notifications:refresh_notifs()
+        task.wait(0.6)
+        if items["notification"] then
+            items["notification"]:Destroy()
+        end
     end)
 end
 
@@ -3090,7 +3129,8 @@ function library:Notification(params)
     notifications:create_notification({
         name = params.Name or params.name or "Notification",
         info = params.Description or params.info or "",
-        lifetime = params.Lifetime or 3,
+        lifetime = params.Lifetime or 3.5,
+        icon = params.Icon or params.icon or "terminal",
     })
 end
 
