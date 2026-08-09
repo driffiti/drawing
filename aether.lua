@@ -2132,6 +2132,27 @@ function library:dropdown(options)
         return data
     end
 
+    function cfg.refresh(new_options)
+        if type(new_options) ~= "table" then return end
+        for _, data in popup.order do
+            if data.row then data.row:Destroy() end
+        end
+        popup.order = {}
+        cfg.options = new_options
+        for _, text in new_options do
+            addRow(tostring(text))
+        end
+        if cfg.multi then
+            cfg.value = {}
+            items["selected"].Text = "None"
+        else
+            cfg.value = new_options[1]
+            items["selected"].Text = tostring(new_options[1] or "None")
+        end
+        flags[cfg.flag] = cfg.value
+    end
+    cfg.Refresh = cfg.refresh
+
     function cfg.report()
         flags[cfg.flag] = cfg.value
         if cfg.multi then
@@ -3829,23 +3850,4 @@ function library:Notification(Params)
             if d:IsA("TextLabel") then
                 library:tween(d, { TextTransparency = 1 }, Enum.EasingStyle.Quart, 0.25)
             elseif d:IsA("ImageLabel") then
-                library:tween(d, { ImageTransparency = 1 }, Enum.EasingStyle.Quart, 0.25)
-            elseif d:IsA("Frame") then
-                library:tween(d, { BackgroundTransparency = 1 }, Enum.EasingStyle.Quart, 0.25)
-            end
-        end
-        task.delay(0.3, function()
-            local Index = find(library.Notifs, Notif)
-            if Index then remove(library.Notifs, Index) end
-            Frame:Destroy()
-            Reflow()
-        end)
-    end
-
-    CloseHit.MouseButton1Down:Connect(Dismiss)
-    library:tween(BarFill, { Size = dim2(0, 0, 1, 0) }, Enum.EasingStyle.Linear, Duration)
-    task.delay(Duration, Dismiss)
-end
-
-getgenv().Aether = library
-return library
+                library:tween(d, { ImageTra
