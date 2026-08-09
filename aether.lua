@@ -2,8 +2,6 @@
     Aether UI Library
     Made by empulsia
     Version 1.3
-    - Real colour picker, dropdown animations from button
-    - Profile avatar + popup menu
 ]]
 
 local uis = game:GetService("UserInputService")
@@ -673,7 +671,7 @@ function library:window(properties)
             BackgroundColor3 = themes.preset.line,
         })
 
-        -- Profile avatar button (top-right)
+        -- Profile avatar (top-right of header, locked to main window)
         items["profile_btn"] = library:create("TextButton", {
             Parent = items["multi_holder"],
             Name = "\0",
@@ -683,139 +681,175 @@ function library:window(properties)
             AnchorPoint = vec2(1, 0.5),
             Position = dim2(1, -14, 0.5, 0),
             Size = dim2(0, 32, 0, 32),
-            ZIndex = 5,
+            ZIndex = 6,
             BorderSizePixel = 0,
         })
-
         items["profile_avatar"] = library:create("ImageLabel", {
             Parent = items["profile_btn"],
             Name = "\0",
             BackgroundColor3 = themes.preset.light,
             Size = dim2(1, 0, 1, 0),
             BorderSizePixel = 0,
-            ZIndex = 5,
+            ZIndex = 6,
         })
         library:create("UICorner", { Parent = items["profile_avatar"], CornerRadius = dim(1, 0) })
-
-        -- Load player avatar
         task.spawn(function()
             local ok, content = pcall(function()
                 return players:GetUserThumbnailAsync(lp.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
             end)
-            if ok and content then
-                items["profile_avatar"].Image = content
-            end
+            if ok and content then items["profile_avatar"].Image = content end
         end)
 
-        -- Profile popup
+        -- Profile popup (parented to main so it moves with the menu)
         local profileOpen = false
         local profilePopup = library:create("Frame", {
-            Parent = library["other"],
+            Parent = items["main"],
             Name = "\0",
-            Size = dim2(0, 220, 0, 0),
+            Size = dim2(0, 230, 0, 0),
             BackgroundColor3 = themes.preset.section,
             BorderSizePixel = 0,
             Visible = false,
-            ZIndex = 70,
+            ZIndex = 80,
             ClipsDescendants = true,
+            AnchorPoint = vec2(1, 0),
+            Position = dim2(1, -10, 0, 56),
         })
         library:create("UICorner", { Parent = profilePopup, CornerRadius = dim(0, 10) })
 
-        local function buildProfilePopup()
+        local function rebuildProfile()
             for _, c in profilePopup:GetChildren() do
                 if not c:IsA("UICorner") then c:Destroy() end
             end
-
             local display = lp.DisplayName or lp.Name
             local uname = "@" .. (lp.Name or "unknown")
             local uid = tostring(lp.UserId or 0)
             local age = "Unknown"
             pcall(function() age = tostring(lp.AccountAge or 0) .. " days" end)
 
-            local bigAvatar = library:create("ImageLabel", {
+            local bigAv = library:create("ImageLabel", {
                 Parent = profilePopup,
                 BackgroundColor3 = themes.preset.light,
                 Position = dim2(0, 14, 0, 14),
                 Size = dim2(0, 42, 0, 42),
                 BorderSizePixel = 0,
-                ZIndex = 71,
+                Image = items["profile_avatar"].Image,
+                ZIndex = 81,
             })
-            library:create("UICorner", { Parent = bigAvatar, CornerRadius = dim(1, 0) })
-            bigAvatar.Image = items["profile_avatar"].Image
+            library:create("UICorner", { Parent = bigAv, CornerRadius = dim(1, 0) })
 
             library:create("TextLabel", {
-                Parent = profilePopup,
-                FontFace = fonts.font,
-                Text = display,
-                TextSize = 15,
-                TextColor3 = themes.preset.text,
-                BackgroundTransparency = 1,
-                Position = dim2(0, 66, 0, 16),
-                Size = dim2(1, -80, 0, 18),
-                TextXAlignment = Enum.TextXAlignment.Left,
-                BorderSizePixel = 0,
-                ZIndex = 71,
+                Parent = profilePopup, FontFace = fonts.font, Text = display, TextSize = 15,
+                TextColor3 = themes.preset.text, BackgroundTransparency = 1,
+                Position = dim2(0, 66, 0, 16), Size = dim2(1, -80, 0, 18),
+                TextXAlignment = Enum.TextXAlignment.Left, BorderSizePixel = 0, ZIndex = 81,
             })
-
             library:create("TextLabel", {
-                Parent = profilePopup,
-                FontFace = fonts.font,
-                Text = uname,
-                TextSize = 13,
-                TextColor3 = themes.preset.dimtext,
-                BackgroundTransparency = 1,
-                Position = dim2(0, 66, 0, 36),
-                Size = dim2(1, -80, 0, 16),
-                TextXAlignment = Enum.TextXAlignment.Left,
-                BorderSizePixel = 0,
-                ZIndex = 71,
+                Parent = profilePopup, FontFace = fonts.font, Text = uname, TextSize = 13,
+                TextColor3 = themes.preset.dimtext, BackgroundTransparency = 1,
+                Position = dim2(0, 66, 0, 36), Size = dim2(1, -80, 0, 16),
+                TextXAlignment = Enum.TextXAlignment.Left, BorderSizePixel = 0, ZIndex = 81,
             })
 
-            local function row(y, label, value)
+            local function infoRow(y, label, value)
                 library:create("TextLabel", {
-                    Parent = profilePopup,
-                    FontFace = fonts.font,
-                    Text = label,
-                    TextSize = 13,
-                    TextColor3 = themes.preset.dimtext,
-                    BackgroundTransparency = 1,
-                    Position = dim2(0, 14, 0, y),
-                    Size = dim2(0, 90, 0, 16),
-                    TextXAlignment = Enum.TextXAlignment.Left,
-                    BorderSizePixel = 0,
-                    ZIndex = 71,
+                    Parent = profilePopup, FontFace = fonts.font, Text = label, TextSize = 13,
+                    TextColor3 = themes.preset.dimtext, BackgroundTransparency = 1,
+                    Position = dim2(0, 14, 0, y), Size = dim2(0, 100, 0, 16),
+                    TextXAlignment = Enum.TextXAlignment.Left, BorderSizePixel = 0, ZIndex = 81,
                 })
                 library:create("TextLabel", {
-                    Parent = profilePopup,
-                    FontFace = fonts.font,
-                    Text = value,
-                    TextSize = 13,
-                    TextColor3 = themes.preset.text,
-                    BackgroundTransparency = 1,
-                    Position = dim2(0, 110, 0, y),
-                    Size = dim2(1, -124, 0, 16),
-                    TextXAlignment = Enum.TextXAlignment.Right,
-                    BorderSizePixel = 0,
-                    ZIndex = 71,
+                    Parent = profilePopup, FontFace = fonts.font, Text = value, TextSize = 13,
+                    TextColor3 = themes.preset.text, BackgroundTransparency = 1,
+                    Position = dim2(0, 110, 0, y), Size = dim2(1, -124, 0, 16),
+                    TextXAlignment = Enum.TextXAlignment.Right, BorderSizePixel = 0, ZIndex = 81,
                 })
             end
+            infoRow(68, "User ID", uid)
+            infoRow(90, "Account age", age)
 
-            row(68, "User ID", uid)
-            row(90, "Account age", age)
+            -- Interface scale
+            library:create("TextLabel", {
+                Parent = profilePopup, FontFace = fonts.font, Text = "Interface scale", TextSize = 13,
+                TextColor3 = themes.preset.dimtext, BackgroundTransparency = 1,
+                Position = dim2(0, 14, 0, 118), Size = dim2(1, -28, 0, 16),
+                TextXAlignment = Enum.TextXAlignment.Left, BorderSizePixel = 0, ZIndex = 81,
+            })
+            local scaleTrack = library:create("Frame", {
+                Parent = profilePopup, BackgroundColor3 = themes.preset.light,
+                Position = dim2(0, 14, 0, 140), Size = dim2(1, -28, 0, 6),
+                BorderSizePixel = 0, ZIndex = 81,
+            })
+            library:create("UICorner", { Parent = scaleTrack, CornerRadius = dim(1, 0) })
+            local scaleFill = library:create("Frame", {
+                Parent = scaleTrack, BackgroundColor3 = themes.preset.accent,
+                Size = dim2(0.5, 0, 1, 0), BorderSizePixel = 0, ZIndex = 82,
+            })
+            library:create("UICorner", { Parent = scaleFill, CornerRadius = dim(1, 0) })
+            library:apply_theme(scaleFill, "accent", "BackgroundColor3")
+            local scaleKnob = library:create("Frame", {
+                Parent = scaleTrack, AnchorPoint = vec2(0.5, 0.5),
+                Position = dim2(0.5, 0, 0.5, 0), Size = dim2(0, 12, 0, 12),
+                BackgroundColor3 = rgb(255, 255, 255), BorderSizePixel = 0, ZIndex = 83,
+            })
+            library:create("UICorner", { Parent = scaleKnob, CornerRadius = dim(1, 0) })
+            local scaleVal = library:create("TextLabel", {
+                Parent = profilePopup, FontFace = fonts.font, Text = "100%", TextSize = 12,
+                TextColor3 = themes.preset.text, BackgroundTransparency = 1,
+                Position = dim2(1, -50, 0, 118), Size = dim2(0, 36, 0, 16),
+                TextXAlignment = Enum.TextXAlignment.Right, BorderSizePixel = 0, ZIndex = 81,
+            })
+            local scaleDrag = false
+            local function setScale(pct)
+                pct = clamp(pct, 50, 150)
+                local a = (pct - 50) / 100
+                scaleFill.Size = dim2(a, 0, 1, 0)
+                scaleKnob.Position = dim2(a, 0, 0.5, 0)
+                scaleVal.Text = tostring(floor(pct)) .. "%"
+                if library.UIScale then
+                    library.UIScale.Scale = pct / 100
+                end
+            end
+            scaleTrack.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    scaleDrag = true
+                    local rel = clamp((input.Position.X - scaleTrack.AbsolutePosition.X) / scaleTrack.AbsoluteSize.X, 0, 1)
+                    setScale(50 + rel * 100)
+                end
+            end)
+            library:connection(uis.InputChanged, function(input)
+                if scaleDrag and input.UserInputType == Enum.UserInputType.MouseMovement then
+                    local rel = clamp((input.Position.X - scaleTrack.AbsolutePosition.X) / scaleTrack.AbsoluteSize.X, 0, 1)
+                    setScale(50 + rel * 100)
+                end
+            end)
+            library:connection(uis.InputEnded, function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 then scaleDrag = false end
+            end)
+            setScale(100)
 
-            -- Unload button
-            local unloadBtn = library:create("TextButton", {
-                Parent = profilePopup,
-                FontFace = fonts.font,
-                Text = "Unload",
-                TextSize = 14,
-                TextColor3 = themes.preset.text,
-                AutoButtonColor = false,
+            -- Menu toggle keybind display
+            library:create("TextLabel", {
+                Parent = profilePopup, FontFace = fonts.font, Text = "Menu toggle", TextSize = 13,
+                TextColor3 = themes.preset.dimtext, BackgroundTransparency = 1,
+                Position = dim2(0, 14, 0, 158), Size = dim2(0, 100, 0, 16),
+                TextXAlignment = Enum.TextXAlignment.Left, BorderSizePixel = 0, ZIndex = 81,
+            })
+            local keyBox = library:create("TextButton", {
+                Parent = profilePopup, FontFace = fonts.font, Text = "RCtrl", TextSize = 12,
+                TextColor3 = themes.preset.text, AutoButtonColor = false,
                 BackgroundColor3 = themes.preset.light,
-                Position = dim2(0, 14, 0, 120),
-                Size = dim2(1, -28, 0, 30),
-                BorderSizePixel = 0,
-                ZIndex = 71,
+                Position = dim2(1, -70, 0, 154), Size = dim2(0, 56, 0, 22),
+                BorderSizePixel = 0, ZIndex = 81,
+            })
+            library:create("UICorner", { Parent = keyBox, CornerRadius = dim(0, 4) })
+
+            -- Unload
+            local unloadBtn = library:create("TextButton", {
+                Parent = profilePopup, FontFace = fonts.font, Text = "Unload", TextSize = 14,
+                TextColor3 = themes.preset.text, AutoButtonColor = false,
+                BackgroundColor3 = themes.preset.light,
+                Position = dim2(0, 14, 0, 190), Size = dim2(1, -28, 0, 30),
+                BorderSizePixel = 0, ZIndex = 81,
             })
             library:create("UICorner", { Parent = unloadBtn, CornerRadius = dim(0, 6) })
             unloadBtn.MouseButton1Click:Connect(function()
@@ -827,36 +861,43 @@ function library:window(properties)
         local function setProfileVisible(bool)
             profileOpen = bool
             if bool then
-                buildProfilePopup()
-                local btn = items["profile_btn"]
-                local px = btn.AbsolutePosition.X + btn.AbsoluteSize.X - 220
-                local py = btn.AbsolutePosition.Y + btn.AbsoluteSize.Y + 8
-                profilePopup.Size = dim2(0, 220, 0, 0)
+                rebuildProfile()
+                profilePopup.Size = dim2(0, 230, 0, 0)
                 profilePopup.BackgroundTransparency = 1
-                profilePopup.Position = dim2(0, px, 0, py)
-                profilePopup.Parent = library["items"]
                 profilePopup.Visible = true
                 library:tween(profilePopup, {
-                    Size = dim2(0, 220, 0, 164),
+                    Size = dim2(0, 230, 0, 234),
                     BackgroundTransparency = 0,
                 }, Enum.EasingStyle.Quint, 0.22)
-                library:close_element()
             else
                 library:tween(profilePopup, {
-                    Size = dim2(0, 220, 0, 0),
+                    Size = dim2(0, 230, 0, 0),
                     BackgroundTransparency = 1,
                 }, Enum.EasingStyle.Quint, 0.18)
                 task.delay(0.2, function()
-                    if not profileOpen then
-                        profilePopup.Visible = false
-                        profilePopup.Parent = library["other"]
-                    end
+                    if not profileOpen then profilePopup.Visible = false end
                 end)
             end
         end
 
         items["profile_btn"].MouseButton1Click:Connect(function()
             setProfileVisible(not profileOpen)
+        end)
+
+        -- Click outside to close
+        library:connection(uis.InputBegan, function(input)
+            if not profileOpen then return end
+            if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
+            local pos = input.Position
+            local pAbs = profilePopup.AbsolutePosition
+            local pSize = profilePopup.AbsoluteSize
+            local bAbs = items["profile_btn"].AbsolutePosition
+            local bSize = items["profile_btn"].AbsoluteSize
+            local overPopup = pos.X >= pAbs.X and pos.X <= pAbs.X + pSize.X and pos.Y >= pAbs.Y and pos.Y <= pAbs.Y + pSize.Y
+            local overBtn = pos.X >= bAbs.X and pos.X <= bAbs.X + bSize.X and pos.Y >= bAbs.Y and pos.Y <= bAbs.Y + bSize.Y
+            if not overPopup and not overBtn then
+                setProfileVisible(false)
+            end
         end)
 
         items["shadow"] = library:create("ImageLabel", {
@@ -2154,7 +2195,6 @@ function library:dropdown(options)
             local showSearch = #popup.order > 8
             local width = items["box"].AbsoluteSize.X
             local listHeight = min(#popup.order * 30 + 8, 168)
-            local targetH = showSearch and (listHeight + 30) or listHeight
 
             searchBox.Text = ""
             applySearch("")
@@ -2163,51 +2203,22 @@ function library:dropdown(options)
             if showSearch then
                 scroll.Position = dim2(0, 0, 0, 30)
                 scroll.Size = dim2(1, 0, 1, -30)
+                popupFrame.Size = dim2(0, width, 0, listHeight + 30)
             else
                 scroll.Position = dim2(0, 0, 0, 0)
                 scroll.Size = dim2(1, 0, 1, 0)
+                popupFrame.Size = dim2(0, width, 0, listHeight)
             end
 
-            -- Start exactly under the button, height 0, then expand downward
-            local box = items["box"]
-            local startX = box.AbsolutePosition.X
-            local startY = box.AbsolutePosition.Y + box.AbsoluteSize.Y + 4
-
-            popupFrame.Size = dim2(0, width, 0, 0)
-            popupFrame.BackgroundTransparency = 0.4
-            popupFrame.Position = dim2(0, startX, 0, startY)
+            popupFrame.Position = dim2(0, items["box"].AbsolutePosition.X, 0, items["box"].AbsolutePosition.Y + items["box"].AbsoluteSize.Y + 8)
             popupFrame.Parent = library["items"]
             popupFrame.Visible = true
-            popupFrame.ClipsDescendants = true
-
-            library:tween(popupFrame, {
-                Size = dim2(0, width, 0, targetH),
-                BackgroundTransparency = 0,
-                Position = dim2(0, startX, 0, startY + 4)
-            }, Enum.EasingStyle.Quint, 0.22)
-
-            library:tween(items["arrow"], { Rotation = 180 }, Enum.EasingStyle.Quint, 0.22)
+            library:tween(items["arrow"], { Rotation = 180 })
             library:close_element(cfg)
         else
-            local box = items["box"]
-            local startX = box.AbsolutePosition.X
-            local startY = box.AbsolutePosition.Y + box.AbsoluteSize.Y + 4
-
-            library:tween(popupFrame, {
-                Size = dim2(0, popupFrame.AbsoluteSize.X, 0, 0),
-                BackgroundTransparency = 0.5,
-                Position = dim2(0, startX, 0, startY)
-            }, Enum.EasingStyle.Quint, 0.18)
-
-            library:tween(items["arrow"], { Rotation = 0 }, Enum.EasingStyle.Quint, 0.18)
-
-            task.delay(0.2, function()
-                if not popup.open then
-                    popupFrame.Visible = false
-                    popupFrame.Parent = library["other"]
-                    popupFrame.BackgroundTransparency = 0
-                end
-            end)
+            popupFrame.Visible = false
+            popupFrame.Parent = library["other"]
+            library:tween(items["arrow"], { Rotation = 0 })
         end
     end
 
@@ -2810,7 +2821,9 @@ function library:label(options)
         PaddingLeft = dim(0, 5),
     })
 
-    function cfg.set(text)
+    function cfg.set(...)
+        local args = { ... }
+        local text = args[#args]
         items["label"].Text = tostring(text)
     end
     cfg.Set = cfg.set
@@ -3044,8 +3057,8 @@ function library:init_config(window)
 
     show_info = function(name)
         if not name then
-            for k, l in info_labels do
-                l:set(k .. ": -")
+            for k, l in pairs(info_labels) do
+                l.set(k .. ": -")
             end
             return
         end
@@ -3055,17 +3068,17 @@ function library:init_config(window)
             data = http_service:JSONDecode(readfile(path))
         end)
         local count = 0
-        for key in data do
+        for key in pairs(data) do
             if string.sub(tostring(key), 1, 2) ~= "__" then
                 count = count + 1
             end
         end
         local same = data.__version == library.version
-        info_labels["Config version"]:set("Config version: " .. (data.__version or "Unknown"))
-        info_labels["Compatibility"]:set("Compatibility: " .. (same and "Compatible" or "Outdated"))
-        info_labels["Created"]:set("Created: " .. (data.__created or "Unknown"))
-        info_labels["Creator"]:set("Creator: " .. (data.__creator or "Unknown"))
-        info_labels["Saved flags"]:set("Saved flags: " .. tostring(count) .. " flags")
+        info_labels["Config version"].set("Config version: " .. (data.__version or "Unknown"))
+        info_labels["Compatibility"].set("Compatibility: " .. (same and "Compatible" or "Outdated"))
+        info_labels["Created"].set("Created: " .. (data.__created or "Unknown"))
+        info_labels["Creator"].set("Creator: " .. (data.__creator or "Unknown"))
+        info_labels["Saved flags"].set("Saved flags: " .. tostring(count) .. " flags")
     end
 
     show_info(nil)
