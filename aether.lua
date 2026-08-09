@@ -93,6 +93,7 @@ local themes = {
             TextColor3 = {},
             ImageColor3 = {},
             ScrollBarImageColor3 = {},
+            Color = {}, -- UIStroke
         },
     },
 }
@@ -270,7 +271,18 @@ function library:round(number, float)
 end
 
 function library:apply_theme(instance, theme, property)
-    insert(themes.utility[theme][property], instance)
+    if not instance then return end
+    local bucket = themes.utility[theme] and themes.utility[theme][property]
+    if not bucket then
+        -- auto-create missing property tables so theming never crashes
+        if themes.utility[theme] then
+            themes.utility[theme][property] = {}
+            bucket = themes.utility[theme][property]
+        else
+            return
+        end
+    end
+    insert(bucket, instance)
 end
 
 function library:update_theme(theme, color)
