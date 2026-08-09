@@ -2159,7 +2159,7 @@ function library:dropdown(options)
             -- Embed under the button inside the same dropdown control
             popupFrame.BackgroundColor3 = themes.preset.light
             popupFrame.BackgroundTransparency = 0
-            popupFrame.Position = dim2(0, 5, 0, 49) -- flush under box (y=22+28-1)
+            popupFrame.Position = dim2(0, 5, 0, 52) -- slightly below the button
             popupFrame.Size = dim2(1, -10, 0, 0)
             popupFrame.Parent = items["dropdown"]
             popupFrame.Visible = true
