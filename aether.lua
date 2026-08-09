@@ -2142,60 +2142,52 @@ function library:dropdown(options)
         popup.open = bool
         if bool then
             local showSearch = #popup.order > 8
-            local width = items["box"].AbsoluteSize.X
-            local listHeight = min(#popup.order * 30 + 8, 168)
-            local targetH = showSearch and (listHeight + 30) or listHeight
+            local listHeight = min(#popup.order * 28 + 6, 160)
+            local targetH = showSearch and (listHeight + 28) or listHeight
 
             searchBox.Text = ""
             applySearch("")
             searchHolder.Visible = showSearch
             if showSearch then
-                scroll.Position = dim2(0, 0, 0, 30)
-                scroll.Size = dim2(1, 0, 1, -30)
+                scroll.Position = dim2(0, 0, 0, 28)
+                scroll.Size = dim2(1, 0, 1, -28)
             else
                 scroll.Position = dim2(0, 0, 0, 0)
                 scroll.Size = dim2(1, 0, 1, 0)
             end
 
-            local box = items["box"]
-            local scale = 1
-            local sx = box.AbsolutePosition.X / scale
-            -- sit flush under the button so it reads as one control
-            local sy = (box.AbsolutePosition.Y + box.AbsoluteSize.Y) / scale - 1
-            local w = box.AbsoluteSize.X / scale
-
+            -- Embed under the button inside the same dropdown control
             popupFrame.BackgroundColor3 = themes.preset.light
-            popupFrame.Size = dim2(0, w, 0, 0)
             popupFrame.BackgroundTransparency = 0
-            popupFrame.Position = dim2(0, sx, 0, sy)
-            popupFrame.Parent = library["items"]
+            popupFrame.Position = dim2(0, 5, 0, 49) -- flush under box (y=22+28-1)
+            popupFrame.Size = dim2(1, -10, 0, 0)
+            popupFrame.Parent = items["dropdown"]
             popupFrame.Visible = true
             popupFrame.ClipsDescendants = true
+            popupFrame.ZIndex = 5
 
-            -- square the shared edge so list + button look joined
-            local boxCorner = box:FindFirstChildOfClass("UICorner")
-            if boxCorner then boxCorner.CornerRadius = dim(0, 6) end
-
+            -- Grow the whole control so the list is part of the layout
+            library:tween(items["dropdown"], {
+                Size = dim2(1, 0, 0, 54 + targetH),
+            }, Enum.EasingStyle.Quint, 0.18)
             library:tween(popupFrame, {
-                Size = dim2(0, w, 0, targetH),
+                Size = dim2(1, -10, 0, targetH),
             }, Enum.EasingStyle.Quint, 0.18)
             library:tween(items["arrow"], { Rotation = 180 }, Enum.EasingStyle.Quint, 0.18)
             library:close_element(cfg)
         else
-            local box = items["box"]
-            local scale = 1
-            local sx = box.AbsolutePosition.X / scale
-            local sy = (box.AbsolutePosition.Y + box.AbsoluteSize.Y) / scale - 1
-            local w = box.AbsoluteSize.X / scale
-            popupFrame.Position = dim2(0, sx, 0, sy)
             library:tween(popupFrame, {
-                Size = dim2(0, w, 0, 0),
+                Size = dim2(1, -10, 0, 0),
+            }, Enum.EasingStyle.Quint, 0.15)
+            library:tween(items["dropdown"], {
+                Size = dim2(1, 0, 0, 54),
             }, Enum.EasingStyle.Quint, 0.15)
             library:tween(items["arrow"], { Rotation = 0 }, Enum.EasingStyle.Quint, 0.15)
             task.delay(0.16, function()
                 if not popup.open then
                     popupFrame.Visible = false
                     popupFrame.Parent = library["other"]
+                    items["dropdown"].Size = dim2(1, 0, 0, 54)
                 end
             end)
         end
