@@ -2638,6 +2638,23 @@ function library:keybind(options)
     end)
 
     cfg.set({ mode = cfg.mode, active = cfg.active, key = cfg.key })
+
+    -- Sync menu keybind with avatar profile label
+    if cfg.flag == "menu_bind" then
+        local original_set = cfg.set
+        cfg.set = function(input)
+            original_set(input)
+            local key = cfg.key
+            if typeof(key) == "EnumItem" then
+                library.MenuKeybind = key
+                local label = keys[key] or key.Name
+                if library.ProfileKeyBox and library.ProfileKeyBox.Parent then
+                    library.ProfileKeyBox.Text = label
+                end
+            end
+        end
+    end
+
     config_flags[cfg.flag] = cfg.set
 
     return setmetatable(cfg, library)
