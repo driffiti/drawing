@@ -3089,207 +3089,186 @@ function library:Watermark(params)
     return Watermark
 end
 
--- Notifications (right side, cleaner design with icon)
-function notifications:refresh_notifs()
-    local offset = 50
-    local viewport = camera.ViewportSize.X
-    for i, v in notifications.notifs do
-        if v and v.Parent then
-            local targetX = viewport - v.AbsoluteSize.X - 20
-            library:tween(v, { Position = dim2(0, targetX, 0, offset) }, Enum.EasingStyle.Quad, 0.35)
-            offset = offset + (v.AbsoluteSize.Y + 12)
-        end
+-- Notifications — exact Zolar style (right side, icon, close, progress bar)
+library.Notifs = {}
+
+function library:Notification(Params)
+    if library.silent then return end
+
+    Params = Params or {}
+    local Title = Params.Name or Params.Title or "Notification"
+    local Content = Params.Description or Params.Content or Params.info or ""
+    local Icon = Params.Icon or Params.icon or "bell"
+    local Accent = Params.Color or themes.preset.accent
+    local Duration = Params.Duration or Params.lifetime or 5
+
+    local CardW = 300
+    local bodyH = 0
+    if Content ~= "" then
+        bodyH = math.max(18, math.ceil(#Content / 36) * 16)
     end
-    return offset
-end
+    local CardH = 38 + (Content ~= "" and bodyH + 6 or 0) + 18
 
-function notifications:fade(path, is_fading)
-    local fading = is_fading and 1 or 0
-    library:tween(path, { BackgroundTransparency = fading }, Enum.EasingStyle.Quad, 0.8)
-    for _, instance in path:GetDescendants() do
-        if instance:IsA("UIStroke") then
-            library:tween(instance, { Transparency = fading }, Enum.EasingStyle.Quad, 0.8)
-        elseif instance:IsA("TextLabel") then
-            library:tween(instance, { TextTransparency = fading }, Enum.EasingStyle.Quad, 0.8)
-        elseif instance:IsA("ImageLabel") then
-            library:tween(instance, { ImageTransparency = fading }, Enum.EasingStyle.Quad, 0.8)
-        elseif instance:IsA("Frame") and instance ~= path then
-            -- keep accent bar visible longer
-        end
-    end
-end
+    local parent = library["items"] or coregui
 
-function notifications:create_notification(options)
-    local cfg = {
-        name = options.name or "Notification",
-        info = options.info or options.Description or "",
-        lifetime = options.lifetime or 3.5,
-        icon = options.icon or options.Icon or "terminal",
-        items = {},
-    }
-
-    local items = cfg.items
-    local width = 240
-
-    items["notification"] = library:create("Frame", {
-        Parent = library["items"],
-        Size = dim2(0, width, 0, 0),
-        Name = "\0",
-        BorderColor3 = rgb(0, 0, 0),
-        BorderSizePixel = 0,
-        BackgroundTransparency = 1,
-        AnchorPoint = vec2(0, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
+    local Frame = library:create("Frame", {
+        Parent = parent,
+        AnchorPoint = vec2(1, 0),
+        Position = dim2(1, 340, 0, 15),
+        Size = dim2(0, CardW, 0, CardH),
         BackgroundColor3 = themes.preset.section,
+        BorderSizePixel = 0,
         ZIndex = 80,
     })
 
     library:create("UICorner", {
-        Parent = items["notification"],
-        CornerRadius = dim(0, 8),
+        Parent = Frame,
+        CornerRadius = dim(0, 10),
     })
 
-    library:create("UIStroke", {
-        Color = rgb(30, 30, 36),
-        Parent = items["notification"],
-        Transparency = 1,
-        Thickness = 1,
-        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-    })
-
-    -- Left accent strip
-    items["strip"] = library:create("Frame", {
-        Parent = items["notification"],
-        Size = dim2(0, 3, 1, 0),
-        Position = dim2(0, 0, 0, 0),
-        BorderSizePixel = 0,
-        BackgroundColor3 = themes.preset.accent,
+    local IconImg = library:create("ImageLabel", {
+        Parent = Frame,
         BackgroundTransparency = 1,
+        Position = dim2(0, 13, 0, 11),
+        Size = dim2(0, 18, 0, 18),
+        ImageColor3 = Accent,
+        BorderSizePixel = 0,
         ZIndex = 81,
     })
-    library:apply_theme(items["strip"], "accent", "BackgroundColor3")
+    ApplyIcon(IconImg, Icon)
 
-    library:create("UICorner", {
-        Parent = items["strip"],
-        CornerRadius = dim(0, 8),
-    })
-
-    -- Icon
-    items["icon"] = library:create("ImageLabel", {
-        Parent = items["notification"],
-        BackgroundTransparency = 1,
-        Position = dim2(0, 14, 0, 12),
-        Size = dim2(0, 18, 0, 18),
-        ImageColor3 = themes.preset.accent,
-        BorderSizePixel = 0,
-        ZIndex = 82,
-        ImageTransparency = 1,
-    })
-    library:apply_theme(items["icon"], "accent", "ImageColor3")
-    ApplyIcon(items["icon"], cfg.icon)
-
-    -- Title
-    items["title"] = library:create("TextLabel", {
+    library:create("TextLabel", {
+        Parent = Frame,
         FontFace = fonts.font,
+        Text = Title,
+        TextSize = 15,
         TextColor3 = themes.preset.text,
-        BorderColor3 = rgb(0, 0, 0),
-        Text = cfg.name,
-        Parent = items["notification"],
-        Name = "\0",
         BackgroundTransparency = 1,
         Position = dim2(0, 40, 0, 10),
-        Size = dim2(1, -52, 0, 18),
-        BorderSizePixel = 0,
+        Size = dim2(1, -70, 0, 20),
         TextXAlignment = Enum.TextXAlignment.Left,
         TextTruncate = Enum.TextTruncate.AtEnd,
-        TextSize = 14,
-        TextTransparency = 1,
-        ZIndex = 82,
+        BorderSizePixel = 0,
+        ZIndex = 81,
     })
 
-    -- Description
-    items["info"] = library:create("TextLabel", {
-        FontFace = fonts.font,
-        TextColor3 = themes.preset.dimtext,
-        BorderColor3 = rgb(0, 0, 0),
-        Text = cfg.info,
-        Parent = items["notification"],
-        Name = "\0",
-        Position = dim2(0, 40, 0, 30),
-        Size = dim2(1, -52, 0, 0),
-        BorderSizePixel = 0,
+    local CloseImg = library:create("ImageLabel", {
+        Parent = Frame,
         BackgroundTransparency = 1,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextWrapped = true,
-        AutomaticSize = Enum.AutomaticSize.Y,
-        TextSize = 13,
-        TextTransparency = 1,
+        AnchorPoint = vec2(1, 0),
+        Position = dim2(1, -13, 0, 13),
+        Size = dim2(0, 14, 0, 14),
+        ImageColor3 = themes.preset.dimtext,
+        BorderSizePixel = 0,
         ZIndex = 82,
     })
+    ApplyIcon(CloseImg, "x")
 
-    library:create("UIPadding", {
-        PaddingBottom = dim(0, 14),
-        Parent = items["notification"],
-    })
-
-    -- Progress bar at bottom
-    items["bar"] = library:create("Frame", {
-        AnchorPoint = vec2(0, 1),
-        Parent = items["notification"],
-        Name = "\0",
-        Position = dim2(0, 0, 1, 0),
-        BorderColor3 = rgb(0, 0, 0),
-        Size = dim2(0, 0, 0, 2),
-        BackgroundTransparency = 0,
+    local CloseHit = library:create("TextButton", {
+        Parent = Frame,
+        Text = "",
+        BackgroundTransparency = 1,
+        AnchorPoint = vec2(1, 0),
+        Position = dim2(1, -8, 0, 8),
+        Size = dim2(0, 24, 0, 24),
         BorderSizePixel = 0,
-        BackgroundColor3 = themes.preset.accent,
         ZIndex = 83,
     })
-    library:apply_theme(items["bar"], "accent", "BackgroundColor3")
 
-    local index = #notifications.notifs + 1
-    notifications.notifs[index] = items["notification"]
+    if Content ~= "" then
+        library:create("TextLabel", {
+            Parent = Frame,
+            FontFace = fonts.font,
+            Text = Content,
+            TextSize = 14,
+            TextColor3 = themes.preset.dimtext,
+            BackgroundTransparency = 1,
+            Position = dim2(0, 13, 0, 35),
+            Size = dim2(1, -26, 0, bodyH),
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextYAlignment = Enum.TextYAlignment.Top,
+            TextWrapped = true,
+            BorderSizePixel = 0,
+            ZIndex = 81,
+        })
+    end
 
-    -- Start off-screen to the right
-    local viewport = camera.ViewportSize.X
-    items["notification"].Position = dim2(0, viewport + 20, 0, 50)
-    items["notification"].BackgroundTransparency = 0
-
-    -- Fade in elements
-    library:tween(items["strip"], { BackgroundTransparency = 0 }, Enum.EasingStyle.Quad, 0.4)
-    library:tween(items["icon"], { ImageTransparency = 0 }, Enum.EasingStyle.Quad, 0.4)
-    library:tween(items["title"], { TextTransparency = 0 }, Enum.EasingStyle.Quad, 0.4)
-    library:tween(items["info"], { TextTransparency = 0 }, Enum.EasingStyle.Quad, 0.4)
-    library:tween(items["notification"]:FindFirstChildOfClass("UIStroke"), { Transparency = 0 }, Enum.EasingStyle.Quad, 0.4)
-
-    local offset = notifications:refresh_notifs()
-    local targetX = viewport - width - 20
-    library:tween(items["notification"], { Position = dim2(0, targetX, 0, offset) }, Enum.EasingStyle.Quint, 0.45)
-    library:tween(items["bar"], { Size = dim2(1, 0, 0, 2) }, Enum.EasingStyle.Linear, cfg.lifetime)
-
-    task.spawn(function()
-        task.wait(cfg.lifetime)
-        notifications.notifs[index] = nil
-        notifications:fade(items["notification"], true)
-        library:tween(items["notification"], {
-            Position = dim2(0, viewport + 30, 0, items["notification"].Position.Y.Offset)
-        }, Enum.EasingStyle.Quad, 0.5)
-        notifications:refresh_notifs()
-        task.wait(0.6)
-        if items["notification"] then
-            items["notification"]:Destroy()
-        end
-    end)
-end
-
--- Expose notification helper
-function library:Notification(params)
-    notifications:create_notification({
-        name = params.Name or params.name or "Notification",
-        info = params.Description or params.info or "",
-        lifetime = params.Lifetime or 3.5,
-        icon = params.Icon or params.icon or "terminal",
+    local BarBack = library:create("Frame", {
+        Parent = Frame,
+        Position = dim2(0, 13, 1, -12),
+        Size = dim2(1, -26, 0, 5),
+        BackgroundColor3 = themes.preset.element or themes.preset.light,
+        BorderSizePixel = 0,
+        ZIndex = 81,
     })
+    library:create("UICorner", { Parent = BarBack, CornerRadius = dim(0, 4) })
+
+    local BarFill = library:create("Frame", {
+        Parent = BarBack,
+        Size = dim2(1, 0, 1, 0),
+        BackgroundColor3 = Accent,
+        BorderSizePixel = 0,
+        ZIndex = 82,
+    })
+    library:create("UICorner", { Parent = BarFill, CornerRadius = dim(0, 4) })
+    library:apply_theme(BarFill, "accent", "BackgroundColor3")
+
+    local Notif = {
+        Frame = Frame,
+        Dead = false,
+        Height = CardH,
+    }
+    insert(library.Notifs, Notif)
+
+    local function StackHeight(Stop)
+        local Y = 15
+        for _, Value in library.Notifs do
+            if Value == Stop then break end
+            if Value.Dead then continue end
+            Y = Y + Value.Height + 10
+        end
+        return Y
+    end
+
+    local function Reflow()
+        local Y = 15
+        for _, Value in library.Notifs do
+            if Value.Dead then continue end
+            library:tween(Value.Frame, { Position = dim2(1, -15, 0, Y) }, Enum.EasingStyle.Quart, 0.3)
+            Y = Y + Value.Height + 10
+        end
+    end
+
+    local StartY = StackHeight(Notif)
+    Frame.Position = dim2(1, 340, 0, StartY)
+    library:tween(Frame, { Position = dim2(1, -15, 0, StartY) }, Enum.EasingStyle.Exponential, 0.45)
+
+    local function Dismiss()
+        if Notif.Dead then return end
+        Notif.Dead = true
+        local Current = Frame.Position
+        library:tween(Frame, { Position = dim2(1, -15, 0, Current.Y.Offset - 14) }, Enum.EasingStyle.Quart, 0.25)
+        library:tween(Frame, { BackgroundTransparency = 1 }, Enum.EasingStyle.Quart, 0.25)
+        for _, d in Frame:GetDescendants() do
+            if d:IsA("TextLabel") then
+                library:tween(d, { TextTransparency = 1 }, Enum.EasingStyle.Quart, 0.25)
+            elseif d:IsA("ImageLabel") then
+                library:tween(d, { ImageTransparency = 1 }, Enum.EasingStyle.Quart, 0.25)
+            elseif d:IsA("Frame") then
+                library:tween(d, { BackgroundTransparency = 1 }, Enum.EasingStyle.Quart, 0.25)
+            end
+        end
+        task.delay(0.3, function()
+            local Index = find(library.Notifs, Notif)
+            if Index then remove(library.Notifs, Index) end
+            Frame:Destroy()
+            Reflow()
+        end)
+    end
+
+    CloseHit.MouseButton1Down:Connect(Dismiss)
+    library:tween(BarFill, { Size = dim2(0, 0, 1, 0) }, Enum.EasingStyle.Linear, Duration)
+    task.delay(Duration, Dismiss)
 end
 
 getgenv().Aether = library
