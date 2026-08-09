@@ -2,9 +2,8 @@
     Aether UI Library
     Made by empulsia
     Version 1.3
-    - Real HSV + alpha colour picker
-    - Polished dropdown open/close animations
-    - Improved config / theme / user pages
+    - Real colour picker, dropdown animations from button
+    - Profile avatar + popup menu
 ]]
 
 local uis = game:GetService("UserInputService")
@@ -673,6 +672,192 @@ function library:window(properties)
             BorderSizePixel = 0,
             BackgroundColor3 = themes.preset.line,
         })
+
+        -- Profile avatar button (top-right)
+        items["profile_btn"] = library:create("TextButton", {
+            Parent = items["multi_holder"],
+            Name = "\0",
+            Text = "",
+            AutoButtonColor = false,
+            BackgroundTransparency = 1,
+            AnchorPoint = vec2(1, 0.5),
+            Position = dim2(1, -14, 0.5, 0),
+            Size = dim2(0, 32, 0, 32),
+            ZIndex = 5,
+            BorderSizePixel = 0,
+        })
+
+        items["profile_avatar"] = library:create("ImageLabel", {
+            Parent = items["profile_btn"],
+            Name = "\0",
+            BackgroundColor3 = themes.preset.light,
+            Size = dim2(1, 0, 1, 0),
+            BorderSizePixel = 0,
+            ZIndex = 5,
+        })
+        library:create("UICorner", { Parent = items["profile_avatar"], CornerRadius = dim(1, 0) })
+
+        -- Load player avatar
+        task.spawn(function()
+            local ok, content = pcall(function()
+                return players:GetUserThumbnailAsync(lp.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
+            end)
+            if ok and content then
+                items["profile_avatar"].Image = content
+            end
+        end)
+
+        -- Profile popup
+        local profileOpen = false
+        local profilePopup = library:create("Frame", {
+            Parent = library["other"],
+            Name = "\0",
+            Size = dim2(0, 220, 0, 0),
+            BackgroundColor3 = themes.preset.section,
+            BorderSizePixel = 0,
+            Visible = false,
+            ZIndex = 70,
+            ClipsDescendants = true,
+        })
+        library:create("UICorner", { Parent = profilePopup, CornerRadius = dim(0, 10) })
+
+        local function buildProfilePopup()
+            for _, c in profilePopup:GetChildren() do
+                if not c:IsA("UICorner") then c:Destroy() end
+            end
+
+            local display = lp.DisplayName or lp.Name
+            local uname = "@" .. (lp.Name or "unknown")
+            local uid = tostring(lp.UserId or 0)
+            local age = "Unknown"
+            pcall(function() age = tostring(lp.AccountAge or 0) .. " days" end)
+
+            local bigAvatar = library:create("ImageLabel", {
+                Parent = profilePopup,
+                BackgroundColor3 = themes.preset.light,
+                Position = dim2(0, 14, 0, 14),
+                Size = dim2(0, 42, 0, 42),
+                BorderSizePixel = 0,
+                ZIndex = 71,
+            })
+            library:create("UICorner", { Parent = bigAvatar, CornerRadius = dim(1, 0) })
+            bigAvatar.Image = items["profile_avatar"].Image
+
+            library:create("TextLabel", {
+                Parent = profilePopup,
+                FontFace = fonts.font,
+                Text = display,
+                TextSize = 15,
+                TextColor3 = themes.preset.text,
+                BackgroundTransparency = 1,
+                Position = dim2(0, 66, 0, 16),
+                Size = dim2(1, -80, 0, 18),
+                TextXAlignment = Enum.TextXAlignment.Left,
+                BorderSizePixel = 0,
+                ZIndex = 71,
+            })
+
+            library:create("TextLabel", {
+                Parent = profilePopup,
+                FontFace = fonts.font,
+                Text = uname,
+                TextSize = 13,
+                TextColor3 = themes.preset.dimtext,
+                BackgroundTransparency = 1,
+                Position = dim2(0, 66, 0, 36),
+                Size = dim2(1, -80, 0, 16),
+                TextXAlignment = Enum.TextXAlignment.Left,
+                BorderSizePixel = 0,
+                ZIndex = 71,
+            })
+
+            local function row(y, label, value)
+                library:create("TextLabel", {
+                    Parent = profilePopup,
+                    FontFace = fonts.font,
+                    Text = label,
+                    TextSize = 13,
+                    TextColor3 = themes.preset.dimtext,
+                    BackgroundTransparency = 1,
+                    Position = dim2(0, 14, 0, y),
+                    Size = dim2(0, 90, 0, 16),
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    BorderSizePixel = 0,
+                    ZIndex = 71,
+                })
+                library:create("TextLabel", {
+                    Parent = profilePopup,
+                    FontFace = fonts.font,
+                    Text = value,
+                    TextSize = 13,
+                    TextColor3 = themes.preset.text,
+                    BackgroundTransparency = 1,
+                    Position = dim2(0, 110, 0, y),
+                    Size = dim2(1, -124, 0, 16),
+                    TextXAlignment = Enum.TextXAlignment.Right,
+                    BorderSizePixel = 0,
+                    ZIndex = 71,
+                })
+            end
+
+            row(68, "User ID", uid)
+            row(90, "Account age", age)
+
+            -- Unload button
+            local unloadBtn = library:create("TextButton", {
+                Parent = profilePopup,
+                FontFace = fonts.font,
+                Text = "Unload",
+                TextSize = 14,
+                TextColor3 = themes.preset.text,
+                AutoButtonColor = false,
+                BackgroundColor3 = themes.preset.light,
+                Position = dim2(0, 14, 0, 120),
+                Size = dim2(1, -28, 0, 30),
+                BorderSizePixel = 0,
+                ZIndex = 71,
+            })
+            library:create("UICorner", { Parent = unloadBtn, CornerRadius = dim(0, 6) })
+            unloadBtn.MouseButton1Click:Connect(function()
+                library:Notification({ Name = "Unloading", Description = "Aether is shutting down.", Icon = "power" })
+                task.delay(0.35, function() library:unload_menu() end)
+            end)
+        end
+
+        local function setProfileVisible(bool)
+            profileOpen = bool
+            if bool then
+                buildProfilePopup()
+                local btn = items["profile_btn"]
+                local px = btn.AbsolutePosition.X + btn.AbsoluteSize.X - 220
+                local py = btn.AbsolutePosition.Y + btn.AbsoluteSize.Y + 8
+                profilePopup.Size = dim2(0, 220, 0, 0)
+                profilePopup.BackgroundTransparency = 1
+                profilePopup.Position = dim2(0, px, 0, py)
+                profilePopup.Parent = library["items"]
+                profilePopup.Visible = true
+                library:tween(profilePopup, {
+                    Size = dim2(0, 220, 0, 164),
+                    BackgroundTransparency = 0,
+                }, Enum.EasingStyle.Quint, 0.22)
+                library:close_element()
+            else
+                library:tween(profilePopup, {
+                    Size = dim2(0, 220, 0, 0),
+                    BackgroundTransparency = 1,
+                }, Enum.EasingStyle.Quint, 0.18)
+                task.delay(0.2, function()
+                    if not profileOpen then
+                        profilePopup.Visible = false
+                        profilePopup.Parent = library["other"]
+                    end
+                end)
+            end
+        end
+
+        items["profile_btn"].MouseButton1Click:Connect(function()
+            setProfileVisible(not profileOpen)
+        end)
 
         items["shadow"] = library:create("ImageLabel", {
             ImageColor3 = rgb(0, 0, 0),
@@ -1983,10 +2168,14 @@ function library:dropdown(options)
                 scroll.Size = dim2(1, 0, 1, 0)
             end
 
-            local startPos = dim2(0, items["box"].AbsolutePosition.X, 0, items["box"].AbsolutePosition.Y + items["box"].AbsoluteSize.Y + 4)
+            -- Start exactly under the button, height 0, then expand downward
+            local box = items["box"]
+            local startX = box.AbsolutePosition.X
+            local startY = box.AbsolutePosition.Y + box.AbsoluteSize.Y + 4
+
             popupFrame.Size = dim2(0, width, 0, 0)
-            popupFrame.BackgroundTransparency = 1
-            popupFrame.Position = startPos
+            popupFrame.BackgroundTransparency = 0.4
+            popupFrame.Position = dim2(0, startX, 0, startY)
             popupFrame.Parent = library["items"]
             popupFrame.Visible = true
             popupFrame.ClipsDescendants = true
@@ -1994,15 +2183,20 @@ function library:dropdown(options)
             library:tween(popupFrame, {
                 Size = dim2(0, width, 0, targetH),
                 BackgroundTransparency = 0,
-                Position = dim2(0, items["box"].AbsolutePosition.X, 0, items["box"].AbsolutePosition.Y + items["box"].AbsoluteSize.Y + 8)
+                Position = dim2(0, startX, 0, startY + 4)
             }, Enum.EasingStyle.Quint, 0.22)
 
             library:tween(items["arrow"], { Rotation = 180 }, Enum.EasingStyle.Quint, 0.22)
             library:close_element(cfg)
         else
+            local box = items["box"]
+            local startX = box.AbsolutePosition.X
+            local startY = box.AbsolutePosition.Y + box.AbsoluteSize.Y + 4
+
             library:tween(popupFrame, {
                 Size = dim2(0, popupFrame.AbsoluteSize.X, 0, 0),
-                BackgroundTransparency = 1
+                BackgroundTransparency = 0.5,
+                Position = dim2(0, startX, 0, startY)
             }, Enum.EasingStyle.Quint, 0.18)
 
             library:tween(items["arrow"], { Rotation = 0 }, Enum.EasingStyle.Quint, 0.18)
@@ -2468,7 +2662,7 @@ function library:keybind(options)
     return setmetatable(cfg, library)
 end
 
--- Colorpicker (real HSV + alpha popup)
+-- Colorpicker (simplified, functional)
 function library:colorpicker(options)
     local cfg = {
         name = options.name or "Color",
@@ -2534,267 +2728,55 @@ function library:colorpicker(options)
         Parent = items["colorpicker"],
         Name = "\0",
         Position = dim2(1, 0, 0, 0),
-        Size = dim2(0, 18, 0, 18),
+        Size = dim2(0, 16, 0, 16),
         BorderSizePixel = 0,
         TextSize = 14,
         BackgroundColor3 = cfg.color,
     })
-    library:create("UICorner", { Parent = items["swatch"], CornerRadius = dim(0, 5) })
 
-    local popup = library:create("Frame", {
-        Parent = library["other"],
-        Name = "\0",
-        Size = dim2(0, 190, 0, 230),
-        BackgroundColor3 = themes.preset.section,
-        BorderSizePixel = 0,
-        Visible = false,
-        ZIndex = 60,
-        ClipsDescendants = true,
+    library:create("UICorner", {
+        Parent = items["swatch"],
+        CornerRadius = dim(0, 4),
     })
-    library:create("UICorner", { Parent = popup, CornerRadius = dim(0, 8) })
-
-    local field = library:create("ImageButton", {
-        Parent = popup,
-        Name = "\0",
-        AutoButtonColor = false,
-        BackgroundColor3 = rgb(255, 0, 0),
-        Position = dim2(0, 12, 0, 12),
-        Size = dim2(0, 166, 0, 140),
-        BorderSizePixel = 0,
-        ZIndex = 61,
-    })
-    library:create("UICorner", { Parent = field, CornerRadius = dim(0, 6) })
-
-    local tint = library:create("Frame", {
-        Parent = field,
-        Size = dim2(1, 0, 1, 0),
-        BackgroundColor3 = rgb(255, 255, 255),
-        BorderSizePixel = 0,
-        ZIndex = 62,
-    })
-    library:create("UICorner", { Parent = tint, CornerRadius = dim(0, 6) })
-    library:create("UIGradient", {
-        Parent = tint,
-        Transparency = numseq({ numkey(0, 0), numkey(1, 1) }),
-    })
-
-    local shade = library:create("Frame", {
-        Parent = field,
-        Size = dim2(1, 0, 1, 0),
-        BackgroundColor3 = rgb(0, 0, 0),
-        BorderSizePixel = 0,
-        ZIndex = 63,
-    })
-    library:create("UICorner", { Parent = shade, CornerRadius = dim(0, 6) })
-    library:create("UIGradient", {
-        Parent = shade,
-        Rotation = 90,
-        Transparency = numseq({ numkey(0, 1), numkey(1, 0) }),
-    })
-
-    local cursor = library:create("Frame", {
-        Parent = field,
-        AnchorPoint = vec2(0.5, 0.5),
-        Size = dim2(0, 12, 0, 12),
-        BackgroundColor3 = rgb(255, 255, 255),
-        BorderSizePixel = 0,
-        ZIndex = 64,
-        Position = dim2(1, 0, 0, 0),
-    })
-    library:create("UICorner", { Parent = cursor, CornerRadius = dim(1, 0) })
-    library:create("UIStroke", { Parent = cursor, Color = rgb(0, 0, 0), Thickness = 1.5 })
-
-    local hueBar = library:create("ImageButton", {
-        Parent = popup,
-        Name = "\0",
-        AutoButtonColor = false,
-        BackgroundColor3 = rgb(255, 255, 255),
-        Position = dim2(0, 12, 0, 160),
-        Size = dim2(0, 166, 0, 12),
-        BorderSizePixel = 0,
-        ZIndex = 61,
-    })
-    library:create("UICorner", { Parent = hueBar, CornerRadius = dim(0, 4) })
-    library:create("UIGradient", {
-        Parent = hueBar,
-        Color = rgbseq({
-            rgbkey(0, rgb(255, 0, 0)),
-            rgbkey(0.17, rgb(255, 255, 0)),
-            rgbkey(0.33, rgb(0, 255, 0)),
-            rgbkey(0.5, rgb(0, 255, 255)),
-            rgbkey(0.67, rgb(0, 0, 255)),
-            rgbkey(0.83, rgb(255, 0, 255)),
-            rgbkey(1, rgb(255, 0, 0)),
-        }),
-    })
-
-    local hueCursor = library:create("Frame", {
-        Parent = hueBar,
-        AnchorPoint = vec2(0.5, 0.5),
-        Size = dim2(0, 6, 0, 14),
-        BackgroundColor3 = rgb(255, 255, 255),
-        BorderSizePixel = 0,
-        ZIndex = 62,
-        Position = dim2(0, 0, 0.5, 0),
-    })
-    library:create("UICorner", { Parent = hueCursor, CornerRadius = dim(0, 3) })
-    library:create("UIStroke", { Parent = hueCursor, Color = rgb(0, 0, 0), Thickness = 1 })
-
-    local alphaBar = library:create("ImageButton", {
-        Parent = popup,
-        Name = "\0",
-        AutoButtonColor = false,
-        BackgroundColor3 = rgb(255, 255, 255),
-        Position = dim2(0, 12, 0, 180),
-        Size = dim2(0, 166, 0, 12),
-        BorderSizePixel = 0,
-        ZIndex = 61,
-    })
-    library:create("UICorner", { Parent = alphaBar, CornerRadius = dim(0, 4) })
-    local alphaGrad = library:create("UIGradient", {
-        Parent = alphaBar,
-        Transparency = numseq({ numkey(0, 0), numkey(1, 1) }),
-    })
-
-    local alphaCursor = library:create("Frame", {
-        Parent = alphaBar,
-        AnchorPoint = vec2(0.5, 0.5),
-        Size = dim2(0, 6, 0, 14),
-        BackgroundColor3 = rgb(255, 255, 255),
-        BorderSizePixel = 0,
-        ZIndex = 62,
-        Position = dim2(1, 0, 0.5, 0),
-    })
-    library:create("UICorner", { Parent = alphaCursor, CornerRadius = dim(0, 3) })
-    library:create("UIStroke", { Parent = alphaCursor, Color = rgb(0, 0, 0), Thickness = 1 })
-
-    local hexBox = library:create("TextBox", {
-        Parent = popup,
-        FontFace = fonts.font,
-        Text = "#FFFFFF",
-        TextSize = 13,
-        TextColor3 = themes.preset.text,
-        BackgroundColor3 = themes.preset.light,
-        Position = dim2(0, 12, 0, 200),
-        Size = dim2(0, 166, 0, 22),
-        BorderSizePixel = 0,
-        ClearTextOnFocus = false,
-        ZIndex = 61,
-    })
-    library:create("UICorner", { Parent = hexBox, CornerRadius = dim(0, 4) })
-
-    local h, s, v = cfg.color:ToHSV()
-    local dragging = nil
-
-    local function refresh(fromInput)
-        local color = hsv(h, s, v)
-        cfg.color = color
-        items["swatch"].BackgroundColor3 = color
-        field.BackgroundColor3 = hsv(h, 1, 1)
-        alphaBar.BackgroundColor3 = color
-        alphaGrad.Color = rgbseq({ rgbkey(0, color), rgbkey(1, color) })
-        cursor.Position = dim2(s, 0, 1 - v, 0)
-        hueCursor.Position = dim2(h, 0, 0.5, 0)
-        alphaCursor.Position = dim2(1 - cfg.alpha, 0, 0.5, 0)
-        if not fromInput then
-            hexBox.Text = "#" .. color:ToHex():upper()
-        end
-        flags[cfg.flag] = { Color = color, Transparency = cfg.alpha }
-        if not library.silent then
-            cfg.callback(color, cfg.alpha)
-        end
-    end
-
-    local function updateFromMouse(input, mode)
-        local target = mode == "field" and field or mode == "hue" and hueBar or alphaBar
-        local abs = target.AbsolutePosition
-        local size = target.AbsoluteSize
-        local relX = clamp((input.Position.X - abs.X) / size.X, 0, 1)
-        local relY = clamp((input.Position.Y - abs.Y) / size.Y, 0, 1)
-        if mode == "field" then
-            s = relX
-            v = 1 - relY
-        elseif mode == "hue" then
-            h = relX
-        else
-            cfg.alpha = 1 - relX
-        end
-        refresh()
-    end
-
-    local function bindDrag(btn, mode)
-        btn.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                dragging = mode
-                updateFromMouse(input, mode)
-            end
-        end)
-    end
-    bindDrag(field, "field")
-    bindDrag(hueBar, "hue")
-    bindDrag(alphaBar, "alpha")
-
-    library:connection(uis.InputChanged, function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            updateFromMouse(input, dragging)
-        end
-    end)
-    library:connection(uis.InputEnded, function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = nil
-        end
-    end)
-
-    hexBox.FocusLost:Connect(function()
-        local ok, col = pcall(function()
-            return hex(hexBox.Text:gsub("#", ""))
-        end)
-        if ok and col then
-            h, s, v = col:ToHSV()
-            refresh(true)
-        else
-            refresh()
-        end
-    end)
 
     function cfg.set(color, alpha)
         if typeof(color) == "Color3" then
-            h, s, v = color:ToHSV()
             cfg.color = color
         end
-        if alpha then cfg.alpha = alpha end
-        refresh()
-    end
-
-    function cfg.set_visible(bool)
-        cfg.open = bool
-        if bool then
-            local pos = items["swatch"].AbsolutePosition
-            popup.Position = dim2(0, pos.X - 170, 0, pos.Y + 24)
-            popup.Size = dim2(0, 190, 0, 0)
-            popup.BackgroundTransparency = 1
-            popup.Parent = library["items"]
-            popup.Visible = true
-            library:tween(popup, { Size = dim2(0, 190, 0, 230), BackgroundTransparency = 0 }, Enum.EasingStyle.Quint, 0.22)
-            library:close_element(cfg)
-        else
-            library:tween(popup, { Size = dim2(0, 190, 0, 0), BackgroundTransparency = 1 }, Enum.EasingStyle.Quint, 0.18)
-            task.delay(0.2, function()
-                if not cfg.open then
-                    popup.Visible = false
-                    popup.Parent = library["other"]
-                end
-            end)
+        if alpha then
+            cfg.alpha = alpha
+        end
+        items["swatch"].BackgroundColor3 = cfg.color
+        flags[cfg.flag] = {
+            Color = cfg.color,
+            Transparency = cfg.alpha,
+        }
+        if not library.silent then
+            cfg.callback(cfg.color, cfg.alpha)
         end
     end
 
     items["swatch"].MouseButton1Click:Connect(function()
-        cfg.open = not cfg.open
-        cfg.set_visible(cfg.open)
+        -- Simple cycle through accent presets for performance / simplicity
+        local presets = {
+            rgb(155, 150, 219),
+            rgb(120, 132, 255),
+            rgb(96, 170, 255),
+            rgb(72, 214, 168),
+            rgb(245, 130, 120),
+            rgb(240, 118, 150),
+        }
+        local current = find(presets, cfg.color) or 1
+        local nextColor = presets[(current % #presets) + 1]
+        cfg.set(nextColor, cfg.alpha)
+        if options.name and string.find(string.lower(options.name), "accent") then
+            library:update_theme("accent", nextColor)
+        end
     end)
 
-    refresh()
+    cfg.set(cfg.color, cfg.alpha)
     config_flags[cfg.flag] = cfg.set
+
     return setmetatable(cfg, library)
 end
 
