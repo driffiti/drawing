@@ -2206,13 +2206,14 @@ function library:dropdown(options)
             end
 
             local box = items["box"]
-            -- Use GuiInset-aware positions relative to ScreenGui
-            local absPos = box.AbsolutePosition
-            local absSize = box.AbsoluteSize
-            local sx = absPos.X
-            local sy = absPos.Y + absSize.Y + 4
+            local scale = (library.UIScale and library.UIScale.Scale) or 1
+            if scale < 0.01 then scale = 1 end
+            -- AbsolutePosition is screen-space (post-scale); Position offsets are pre-scale
+            local sx = box.AbsolutePosition.X / scale
+            local sy = (box.AbsolutePosition.Y + box.AbsoluteSize.Y) / scale + 4
+            local w = box.AbsoluteSize.X / scale
 
-            popupFrame.Size = dim2(0, width, 0, 0)
+            popupFrame.Size = dim2(0, w, 0, 0)
             popupFrame.BackgroundTransparency = 0.35
             popupFrame.Position = dim2(0, sx, 0, sy)
             popupFrame.Parent = library["items"]
@@ -2220,7 +2221,7 @@ function library:dropdown(options)
             popupFrame.ClipsDescendants = true
 
             library:tween(popupFrame, {
-                Size = dim2(0, width, 0, targetH),
+                Size = dim2(0, w, 0, targetH),
                 BackgroundTransparency = 0,
             }, Enum.EasingStyle.Quint, 0.2)
             library:tween(items["arrow"], { Rotation = 180 }, Enum.EasingStyle.Quint, 0.2)
@@ -2892,10 +2893,14 @@ function library:colorpicker(options)
     function cfg.set_visible(bool)
         cfg.open = bool
         if bool then
+            local scale = (library.UIScale and library.UIScale.Scale) or 1
+            if scale < 0.01 then scale = 1 end
             local sp = items["swatch"].AbsolutePosition
             local ss = items["swatch"].AbsoluteSize
+            local px = (sp.X + ss.X) / scale - 200
+            local py = (sp.Y + ss.Y) / scale + 6
             popup.Size = dim2(0, 200, 0, 0)
-            popup.Position = dim2(0, sp.X + ss.X - 200, 0, sp.Y + ss.Y + 6)
+            popup.Position = dim2(0, px, 0, py)
             popup.Parent = library["items"]
             popup.Visible = true
             library:tween(popup, { Size = dim2(0, 200, 0, 172) }, Enum.EasingStyle.Quint, 0.2)
