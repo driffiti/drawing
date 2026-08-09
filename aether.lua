@@ -62,6 +62,7 @@ local library = {
     theme_dirty = false,
     silent = false,
     MenuKeybind = Enum.KeyCode.RightControl,
+    MenuKeyName = "RCtrl",
 }
 
 library.__index = library
@@ -773,7 +774,7 @@ function library:window(properties)
                 TextXAlignment = Enum.TextXAlignment.Left, BorderSizePixel = 0, ZIndex = 81,
             })
             local currentKey = library.MenuKeybind or Enum.KeyCode.RightControl
-            local keyName = keys[currentKey] or (typeof(currentKey) == "EnumItem" and currentKey.Name) or "RCtrl"
+            local keyName = library.MenuKeyName or keys[currentKey] or (typeof(currentKey) == "EnumItem" and currentKey.Name) or "RCtrl"
             local keyBox = library:create("TextButton", {
                 Parent = profilePopup, FontFace = fonts.font, Text = keyName, TextSize = 12,
                 TextColor3 = themes.preset.text, AutoButtonColor = false,
@@ -2192,6 +2193,28 @@ function library:dropdown(options)
         end
     end
 
+    -- Click anywhere outside the dropdown / its box closes it
+    library:connection(uis.InputBegan, function(input)
+        if not popup.open then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then
+            return
+        end
+        local pos = input.Position
+        local pAbs, pSize = popupFrame.AbsolutePosition, popupFrame.AbsoluteSize
+        local bAbs, bSize = items["box"].AbsolutePosition, items["box"].AbsoluteSize
+        local overPopup = pos.X >= pAbs.X and pos.X <= pAbs.X + pSize.X
+            and pos.Y >= pAbs.Y and pos.Y <= pAbs.Y + pSize.Y
+        local overBox = pos.X >= bAbs.X and pos.X <= bAbs.X + bSize.X
+            and pos.Y >= bAbs.Y and pos.Y <= bAbs.Y + bSize.Y
+        if not overPopup and not overBox then
+            cfg.set_visible(false)
+            cfg.open = false
+            if library.current_open == cfg then
+                library.current_open = nil
+            end
+        end
+    end)
+
     function cfg.set(value)
         if cfg.multi then
             if type(value) ~= "table" then
@@ -2599,6 +2622,18 @@ function library:keybind(options)
             key = cfg.key,
             active = cfg.active,
         }
+
+        -- Keep avatar menu-key label in sync for menu_bind
+        if cfg.flag == "menu_bind" and cfg.key and cfg.key ~= "NONE" then
+            library.MenuKeybind = cfg.key
+            local label = __text or "NONE"
+            library.MenuKeyName = label
+            pcall(function()
+                if library.ProfileKeyBox then
+                    library.ProfileKeyBox.Text = label
+                end
+            end)
+        end
     end
 
     items["keybind_holder"].MouseButton1Down:Connect(function()
