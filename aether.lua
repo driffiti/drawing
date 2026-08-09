@@ -1311,7 +1311,8 @@ function library:toggle(options)
         name = options.name or "Toggle",
         info = options.info or nil,
         flag = options.flag or library:next_flag(),
-        type = options.type and string.lower(options.type) or "checkbox",
+        -- modern switch by default (use type = "checkbox" for old square)
+        type = options.type and string.lower(options.type) or "toggle",
         default = options.default or false,
         folding = options.folding or false,
         callback = options.callback or function() end,
@@ -1376,7 +1377,8 @@ function library:toggle(options)
         SortOrder = Enum.SortOrder.LayoutOrder,
     })
 
-    items["checkbox"] = library:create("TextButton", {
+    -- Modern switch track
+    items["switch"] = library:create("TextButton", {
         FontFace = fonts.small,
         TextColor3 = rgb(0, 0, 0),
         BorderColor3 = rgb(0, 0, 0),
@@ -1386,44 +1388,48 @@ function library:toggle(options)
         Parent = items["right_components"],
         Name = "\0",
         Position = dim2(1, 0, 0, 0),
-        Size = dim2(0, 16, 0, 16),
+        Size = dim2(0, 36, 0, 18),
         BorderSizePixel = 0,
         TextSize = 14,
         BackgroundColor3 = rgb(33, 33, 35),
     })
-    library:apply_theme(items["checkbox"], "accent", "BackgroundColor3")
+    library:apply_theme(items["switch"], "accent", "BackgroundColor3")
 
     library:create("UICorner", {
-        Parent = items["checkbox"],
-        CornerRadius = dim(0, 4),
+        Parent = items["switch"],
+        CornerRadius = dim(0, 999),
     })
 
-    items["checkbox_inline"] = library:create("Frame", {
-        Parent = items["checkbox"],
-        Size = dim2(1, -2, 1, -2),
+    items["knob"] = library:create("Frame", {
+        Parent = items["switch"],
         Name = "\0",
-        BorderMode = Enum.BorderMode.Inset,
-        BorderColor3 = rgb(0, 0, 0),
-        Position = dim2(0, 1, 0, 1),
+        Position = dim2(0, 2, 0, 2),
+        Size = dim2(0, 14, 0, 14),
         BorderSizePixel = 0,
-        BackgroundColor3 = rgb(33, 33, 35),
+        BackgroundColor3 = rgb(200, 200, 205),
     })
-    library:apply_theme(items["checkbox_inline"], "accent", "BackgroundColor3")
 
     library:create("UICorner", {
-        Parent = items["checkbox_inline"],
-        CornerRadius = dim(0, 4),
+        Parent = items["knob"],
+        CornerRadius = dim(0, 999),
     })
 
     function cfg.set(bool)
         cfg.enabled = bool
         flags[cfg.flag] = bool
-        library:tween(items["checkbox"], { BackgroundColor3 = bool and themes.preset.accent or rgb(33, 33, 35) })
-        library:tween(items["checkbox_inline"], { BackgroundColor3 = bool and themes.preset.accent or rgb(33, 33, 35) })
-        cfg.callback(bool)
+        library:tween(items["switch"], {
+            BackgroundColor3 = bool and themes.preset.accent or rgb(33, 33, 35),
+        })
+        library:tween(items["knob"], {
+            Position = bool and dim2(1, -16, 0, 2) or dim2(0, 2, 0, 2),
+            BackgroundColor3 = bool and rgb(255, 255, 255) or rgb(160, 160, 165),
+        })
+        if not library.silent then
+            cfg.callback(bool)
+        end
     end
 
-    items["checkbox"].MouseButton1Click:Connect(function()
+    items["switch"].MouseButton1Click:Connect(function()
         cfg.set(not cfg.enabled)
     end)
 
@@ -1672,6 +1678,13 @@ function library:dropdown(options)
         CornerRadius = dim(0, 6),
     })
 
+    library:create("UIStroke", {
+        Parent = items["box"],
+        Color = themes.preset.line,
+        Thickness = 1,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+    })
+
     items["selected"] = library:create("TextLabel", {
         FontFace = fonts.font,
         TextColor3 = themes.preset.text,
@@ -1733,7 +1746,14 @@ function library:dropdown(options)
 
     library:create("UICorner", {
         Parent = popupFrame,
-        CornerRadius = dim(0, 6),
+        CornerRadius = dim(0, 8),
+    })
+
+    library:create("UIStroke", {
+        Parent = popupFrame,
+        Color = themes.preset.line,
+        Thickness = 1,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
     })
 
     local searchHolder = library:create("Frame", {
@@ -2575,6 +2595,7 @@ function library:label(options)
     function cfg.set(text)
         items["label"].Text = tostring(text)
     end
+    cfg.Set = cfg.set
 
     return setmetatable(cfg, library)
 end
@@ -2692,13 +2713,18 @@ end
 -- Config + Theme panel (Zolar style)
 function library:init_config(window)
     window:seperator({ name = "Settings" })
-    local main = window:tab({ name = "Configs", icon = "folder", tabs = { "Configs", "Theme", "User" } })
+
+    -- Three subtabs: Configs | Theme | User
+    local configsPage, themePage, userPage = window:tab({
+        name = "Configs",
+        icon = "folder",
+        tabs = { "Configs", "Theme", "User" },
+    })
 
     -- ========== CONFIGS TAB ==========
-    local left = main:column({})
-    local right = main:column({})
+    local left = configsPage:column({})
+    local right = configsPage:column({})
 
-    -- Create + list section
     local createSec = left:section({ name = "Configs", icon = "folder", size = 1 })
 
     createSec:textbox({
@@ -2706,6 +2732,9 @@ function library:init_config(window)
         flag = "config_name_text",
         placeholder = "config name",
     })
+
+    local show_info
+    local config_list
 
     createSec:button({
         name = "Create",
@@ -2728,7 +2757,7 @@ function library:init_config(window)
         end,
     })
 
-    local config_list = createSec:list({
+    config_list = createSec:list({
         options = library:ListConfigs(),
         flag = "config_name_list",
         callback = function(name)
@@ -2779,7 +2808,7 @@ function library:init_config(window)
         end,
     })
 
-    -- Config info panel
+    -- Config info panel (right)
     local infoSec = right:section({ name = "Config info", icon = "info", size = 0.55 })
 
     local info_labels = {}
@@ -2795,10 +2824,10 @@ function library:init_config(window)
     add_info_row("Creator")
     add_info_row("Saved flags")
 
-    function show_info(name)
+    show_info = function(name)
         if not name then
             for k, l in info_labels do
-                l:Set(k .. ": -")
+                l:set(k .. ": -")
             end
             return
         end
@@ -2814,16 +2843,15 @@ function library:init_config(window)
             end
         end
         local same = data.__version == library.version
-        info_labels["Config version"]:Set("Config version: " .. (data.__version or "Unknown"))
-        info_labels["Compatibility"]:Set("Compatibility: " .. (same and "Compatible" or "Outdated"))
-        info_labels["Created"]:Set("Created: " .. (data.__created or "Unknown"))
-        info_labels["Creator"]:Set("Creator: " .. (data.__creator or "Unknown"))
-        info_labels["Saved flags"]:Set("Saved flags: " .. tostring(count) .. " flags")
+        info_labels["Config version"]:set("Config version: " .. (data.__version or "Unknown"))
+        info_labels["Compatibility"]:set("Compatibility: " .. (same and "Compatible" or "Outdated"))
+        info_labels["Created"]:set("Created: " .. (data.__created or "Unknown"))
+        info_labels["Creator"]:set("Creator: " .. (data.__creator or "Unknown"))
+        info_labels["Saved flags"]:set("Saved flags: " .. tostring(count) .. " flags")
     end
 
     show_info(nil)
 
-    -- Theme quick section on configs page
     local themeQuick = right:section({ name = "Theme", icon = "palette", size = 0.45 })
     themeQuick:colorpicker({
         name = "Accent",
@@ -2833,39 +2861,97 @@ function library:init_config(window)
             library:update_theme("accent", color)
         end,
     })
-    themeQuick:label({ name = "Presets: Default / Azure / Emerald / Ocean / Rose" })
     themeQuick:button({
-        name = "Default Theme",
+        name = "Default",
         callback = function()
             library:update_theme("accent", rgb(155, 150, 219))
             library:Notification({ Name = "Theme", Description = "Default accent applied.", Icon = "palette" })
         end,
     })
     themeQuick:button({
-        name = "Azure Theme",
+        name = "Azure",
         callback = function()
             library:update_theme("accent", rgb(96, 150, 255))
             library:Notification({ Name = "Theme", Description = "Azure accent applied.", Icon = "palette" })
         end,
     })
     themeQuick:button({
-        name = "Emerald Theme",
+        name = "Emerald",
         callback = function()
             library:update_theme("accent", rgb(76, 214, 148))
             library:Notification({ Name = "Theme", Description = "Emerald accent applied.", Icon = "palette" })
         end,
     })
+    themeQuick:button({
+        name = "Ocean",
+        callback = function()
+            library:update_theme("accent", rgb(72, 200, 214))
+            library:Notification({ Name = "Theme", Description = "Ocean accent applied.", Icon = "palette" })
+        end,
+    })
+    themeQuick:button({
+        name = "Rose",
+        callback = function()
+            library:update_theme("accent", rgb(240, 118, 150))
+            library:Notification({ Name = "Theme", Description = "Rose accent applied.", Icon = "palette" })
+        end,
+    })
 
     -- ========== THEME TAB ==========
-    local themePage = select(2, window:tab({ name = "Theme", icon = "palette", tabs = { "Colors" } }))
-    -- Note: main already created Configs/Theme/User subtabs via the first tab call.
-    -- Theme subtab is the second page from the Configs tab above.
+    local tLeft = themePage:column({})
+    local tRight = themePage:column({})
+
+    local accentSec = tLeft:section({ name = "Accent", icon = "palette", size = 1 })
+    accentSec:colorpicker({
+        name = "Menu Accent",
+        flag = "theme_accent",
+        color = themes.preset.accent,
+        callback = function(color)
+            library:update_theme("accent", color)
+        end,
+    })
+    accentSec:label({ name = "Click the swatch to cycle accent presets." })
+
+    local keySec = tRight:section({ name = "Menu", icon = "settings", size = 1 })
+    keySec:keybind({
+        name = "Menu Bind",
+        flag = "menu_bind",
+        key = Enum.KeyCode.RightControl,
+        mode = "Toggle",
+        callback = function(bool)
+            if window and window.toggle_menu then
+                window.toggle_menu(bool)
+            end
+        end,
+        default = true,
+    })
+    keySec:button({
+        name = "Unload Menu",
+        callback = function()
+            library:Notification({ Name = "Unloading", Description = "Aether is shutting down.", Icon = "power" })
+            task.delay(0.35, function()
+                library:unload_menu()
+            end)
+        end,
+    })
 
     -- ========== USER TAB ==========
-    -- Re-fetch pages: Configs tab returned pages for "Configs", "Theme", "User"
-    -- We already used first two columns on page 1. Page 3 = User.
+    local uCol = userPage:column({})
+    local uSec = uCol:section({ name = "Profile", icon = "user", size = 1 })
 
-    -- Actually the tab() returns multiple pages. Let me structure properly.
+    local display = lp.DisplayName or lp.Name
+    local uname = "@" .. (lp.Name or "unknown")
+    local uid = tostring(lp.UserId or 0)
+    local accountAge = "Unknown"
+    pcall(function()
+        accountAge = tostring(lp.AccountAge or 0) .. " days"
+    end)
+
+    uSec:label({ name = display })
+    uSec:label({ name = uname })
+    uSec:label({ name = "User ID: " .. uid })
+    uSec:label({ name = "Account age: " .. accountAge })
+    uSec:label({ name = "Library: Aether v" .. library.version })
 end
 
 -- User control panel (matches screenshot style)
