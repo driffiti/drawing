@@ -83,7 +83,7 @@ local themes = {
         light = rgb(33, 33, 35),
         hover = rgb(39, 39, 43),
         line = rgb(21, 21, 23),
-        text = rgb(245, 245, 245),
+        text = rgb(255, 255, 255),
         dimtext = rgb(72, 72, 73),
         dimicon = rgb(72, 72, 73),
     },
@@ -553,10 +553,26 @@ function library:window(properties)
         IgnoreGuiInset = true,
     })
 
+    library.UserScale = 1
     library.UIScale = library:create("UIScale", {
         Parent = library["items"],
         Scale = 1,
     })
+    library.PopupScale = library:create("UIScale", {
+        Parent = library["other"],
+        Scale = 1,
+    })
+
+    function library:SetUIScale(multiplier)
+        multiplier = clamp(tonumber(multiplier) or 1, 0.5, 1.5)
+        library.UserScale = multiplier
+        library:close_element()
+        library.UIScale.Scale = multiplier
+        if library.PopupScale then
+            library.PopupScale.Scale = multiplier
+        end
+        flags["ui_scale"] = floor(multiplier * 100)
+    end
 
     library["other"] = library:create("ScreenGui", {
         Parent = coregui,
@@ -794,8 +810,7 @@ function library:window(properties)
                 scaleFill.Size = dim2(a, 0, 1, 0)
                 scaleKnob.Position = dim2(a, 0, 0.5, 0)
                 scaleVal.Text = tostring(floor(pct)) .. "%"
-                if library.UIScale then library.UIScale.Scale = pct / 100 end
-                flags["ui_scale"] = pct
+                library:SetUIScale(pct / 100)
             end
             scaleTrack.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -2920,6 +2935,20 @@ function library:colorpicker(options)
         cfg.set_visible(not cfg.open)
     end)
 
+    -- Click outside closes the picker
+    library:connection(uis.InputBegan, function(input)
+        if not cfg.open then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
+        local pos = input.Position
+        local pAbs, pSize = popup.AbsolutePosition, popup.AbsoluteSize
+        local sAbs, sSize = items["swatch"].AbsolutePosition, items["swatch"].AbsoluteSize
+        local overPopup = pos.X >= pAbs.X and pos.X <= pAbs.X + pSize.X and pos.Y >= pAbs.Y and pos.Y <= pAbs.Y + pSize.Y
+        local overSwatch = pos.X >= sAbs.X and pos.X <= sAbs.X + sSize.X and pos.Y >= sAbs.Y and pos.Y <= sAbs.Y + sSize.Y
+        if not overPopup and not overSwatch then
+            cfg.set_visible(false)
+        end
+    end)
+
     cfg.set(cfg.color, cfg.alpha)
     config_flags[cfg.flag] = cfg.set
 
@@ -3385,11 +3414,6 @@ function library:init_config(window)
         name = "Section", flag = "theme_section", color = themes.preset.section,
         callback = function(color) themes.preset.section = color end,
     })
-    themeSec:colorpicker({
-        name = "Text", flag = "theme_text", color = themes.preset.text,
-        callback = function(color) themes.preset.text = color end,
-    })
-
     themeSec:keybind({
         name = "Menu Bind", flag = "menu_bind",
         key = Enum.KeyCode.RightControl, mode = "Toggle",
